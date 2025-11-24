@@ -11,9 +11,13 @@ export default function SelectDate() {
   const router = useRouter();
   const { tripData, setTripData } = useContext(CreateTripContext);
   
-  const [selectedStartDate, setSelectedStartDate] = useState(null);
-  const [selectedEndDate, setSelectedEndDate] = useState(null);
-  const [selectedDuration, setSelectedDuration] = useState(null);
+  const [selectedStartDate, setSelectedStartDate] = useState(
+    tripData?.startDate ? (tripData.startDate instanceof Date ? tripData.startDate : new Date(tripData.startDate)) : null
+  );
+  const [selectedEndDate, setSelectedEndDate] = useState(
+    tripData?.endDate ? (tripData.endDate instanceof Date ? tripData.endDate : new Date(tripData.endDate)) : null
+  );
+  const [selectedDuration, setSelectedDuration] = useState(tripData?.duration || null);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
 
@@ -30,14 +34,14 @@ export default function SelectDate() {
     navigation.setOptions({
       headerShown: true,
       headerTransparent: true,
-      headerTitle: 'Select Travel Date',
+      headerTitle: 'Seyahat Tarihi Seç',
       headerLeft: () => (
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
       ),
     });
-  }, []);
+  }, [navigation, router]);
 
   // Tarih formatı
   const formatDate = (date) => {
@@ -103,24 +107,22 @@ export default function SelectDate() {
     
     setTripData(updatedTripData);
     
-    // Sonraki sayfaya geç (şimdilik placeholder)
-    Alert.alert('Başarılı', 'Tarih bilgileri kaydedildi!', [
-      { text: 'Tamam', onPress: () => router.push('/create-trip/trip-details') }
-    ]);
+    // Budget seçim sayfasına geç
+    router.push('/create-trip/select-budget');
   };
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.content}>
         {/* Başlık */}
-        <Text style={styles.title}>When do you want to travel?</Text>
+        <Text style={styles.title}>Ne zaman seyahat etmek istersiniz?</Text>
         <Text style={styles.subtitle}>
-          Select your travel dates to get personalized recommendations
+          Kişiselleştirilmiş öneriler almak için seyahat tarihlerinizi seçin
         </Text>
 
         {/* Başlangıç Tarihi */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Start Date</Text>
+          <Text style={styles.sectionTitle}>Başlangıç Tarihi</Text>
           <TouchableOpacity
             style={[
               styles.dateButton,
@@ -137,7 +139,7 @@ export default function SelectDate() {
               styles.dateButtonText,
               selectedStartDate && styles.dateButtonTextSelected
             ]}>
-              {selectedStartDate ? formatDate(selectedStartDate) : 'Select Start Date'}
+              {selectedStartDate ? formatDate(selectedStartDate) : 'Başlangıç Tarihini Seç'}
             </Text>
             <Ionicons 
               name="chevron-down" 
@@ -151,7 +153,7 @@ export default function SelectDate() {
         {/* Hızlı Tarih Seçenekleri */}
         {!selectedStartDate && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Quick Start Options</Text>
+            <Text style={styles.sectionTitle}>Hızlı Başlangıç Seçenekleri</Text>
             <View style={styles.quickDateGrid}>
               <TouchableOpacity
                 style={styles.quickDateButton}
@@ -195,7 +197,7 @@ export default function SelectDate() {
         {/* Süre Seçimi */}
         {selectedStartDate && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Trip Duration</Text>
+            <Text style={styles.sectionTitle}>Seyahat Süresi</Text>
             <View style={styles.durationGrid}>
               {durationOptions.map((option) => (
                 <TouchableOpacity
@@ -221,7 +223,7 @@ export default function SelectDate() {
         {/* Bitiş Tarihi */}
         {selectedStartDate && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>End Date</Text>
+            <Text style={styles.sectionTitle}>Bitiş Tarihi</Text>
             <TouchableOpacity
               style={[
                 styles.dateButton,
@@ -238,7 +240,7 @@ export default function SelectDate() {
                 styles.dateButtonText,
                 selectedEndDate && styles.dateButtonTextSelected
               ]}>
-                {selectedEndDate ? formatDate(selectedEndDate) : 'Select End Date'}
+                {selectedEndDate ? formatDate(selectedEndDate) : 'Bitiş Tarihini Seç'}
               </Text>
               <Ionicons 
                 name="chevron-down" 
@@ -253,21 +255,21 @@ export default function SelectDate() {
         {/* Özet */}
         {selectedStartDate && selectedEndDate && (
           <View style={styles.summary}>
-            <Text style={styles.summaryTitle}>Trip Summary</Text>
+            <Text style={styles.summaryTitle}>Seyahat Özeti</Text>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Destination:</Text>
+              <Text style={styles.summaryLabel}>Hedef:</Text>
               <Text style={styles.summaryValue}>
-                {tripData?.selectedPlace?.name || 'Not selected'}
+                {tripData?.selectedPlace?.name || 'Seçilmedi'}
               </Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Duration:</Text>
+              <Text style={styles.summaryLabel}>Süre:</Text>
               <Text style={styles.summaryValue}>
-                {selectedDuration} day{selectedDuration > 1 ? 's' : ''}
+                {selectedDuration} gün
               </Text>
             </View>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Dates:</Text>
+              <Text style={styles.summaryLabel}>Tarihler:</Text>
               <Text style={styles.summaryValue}>
                 {formatDate(selectedStartDate)} - {formatDate(selectedEndDate)}
               </Text>
@@ -284,7 +286,7 @@ export default function SelectDate() {
           onPress={handleContinue}
           disabled={!selectedStartDate || !selectedEndDate}
         >
-          <Text style={styles.continueButtonText}>Continue</Text>
+          <Text style={styles.continueButtonText}>Devam Et</Text>
           <Ionicons name="arrow-forward" size={20} color={Colors.WHITE} />
         </TouchableOpacity>
       </View>
@@ -296,7 +298,7 @@ export default function SelectDate() {
         onDateSelect={handleStartDateSelect}
         selectedDate={selectedStartDate}
         minDate={getMinDate()}
-        title="Select Start Date"
+        title="Başlangıç Tarihini Seç"
       />
 
       <DatePickerModal
@@ -305,7 +307,7 @@ export default function SelectDate() {
         onDateSelect={handleEndDateSelect}
         selectedDate={selectedEndDate}
         minDate={selectedStartDate || getMinDate()}
-        title="Select End Date"
+        title="Bitiş Tarihini Seç"
       />
     </ScrollView>
   );

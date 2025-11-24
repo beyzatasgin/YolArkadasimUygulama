@@ -17,13 +17,13 @@ export default function SignIn() {
    navigation.setOptions({
     headerShown:false
    })
-  },[])
+  },[navigation])
 
   const onSignIn=()=>{
 
-   if(!email&&!password)
+   if(!email || !password)
     {
-      ToastAndroid.show('Please enter Email & Password',ToastAndroid.LONG);
+      ToastAndroid.show('Lütfen E-posta ve Şifre girin',ToastAndroid.LONG);
       return;
     }
 
@@ -39,10 +39,10 @@ export default function SignIn() {
     const errorCode = error.code;
     const errorMessage = error.message;
     console.log(errorMessage,errorCode)
-    if(errorCode=='auth/invalid-credential')
+    if(errorCode==='auth/invalid-credential')
     {
       
-      ToastAndroid.show("Invalid credentials",ToastAndroid.LONG)
+      ToastAndroid.show("Geçersiz kullanıcı adı veya şifre",ToastAndroid.LONG)
     }
   });
   }
@@ -62,30 +62,30 @@ export default function SignIn() {
         fontFamily:'outfit-bold',
         fontSize:30,
         marginTop:30
-      }} >Let's Sign You In</Text>
+      }} >Giriş Yapalım</Text>
         <Text style={{
         fontFamily:'outfit',
         fontSize:30,
         color:Colors.GRAY,
         marginTop:20
-      }} >Welcome Back</Text>
+      }} >Tekrar Hoş Geldiniz</Text>
           <Text style={{
         fontFamily:'outfit',
         fontSize:30,
         color:Colors.GRAY,
         marginTop:10
-      }} >You've been missed!</Text>
+      }} >Sizi özledik!</Text>
 {/* Email*/}
   <View style={{
     marginTop:50
   }}>
      <Text style={{
       fontFamily:'outfit'
-     }}>   Email  </Text>
+     }}>   E-posta  </Text>
      <TextInput
     style={styles.input}
     onChangeText={(value)=>setEmail(value)}
-    placeholder='Enter Email'/>
+    placeholder='E-posta adresinizi girin'/>
    </View>
 {/* Password*/}
  <View style={{
@@ -93,12 +93,12 @@ export default function SignIn() {
   }}>
      <Text style={{
       fontFamily:'outfit'
-     }}>  Password </Text>
+     }}>  Şifre </Text>
      <TextInput
     secureTextEntry={true}
     style={styles.input}
      onChangeText={(value)=>setPassword(value)}
-    placeholder='Enter Password'/>
+    placeholder='Şifrenizi girin'/>
     </View>
    
     {/*Sign In Button*/}
@@ -111,10 +111,10 @@ export default function SignIn() {
       <Text style={{
         color:Colors.WHITE,
         textAlign:'center'
-      }}>Sign In</Text>
+      }}>Giriş Yap</Text>
     </TouchableOpacity>
 
-     {/*Cerate Account Button*/}
+     {/*Create Account Button*/}
     <TouchableOpacity 
       onPress={()=>router.replace('auth/sign-up')}
       style={{
@@ -127,7 +127,7 @@ export default function SignIn() {
       <Text style={{
         color:Colors.PRIMARY,
         textAlign:'center'
-      }}>Create Account</Text>
+      }}>Hesap Oluştur</Text>
     </TouchableOpacity>
 
     </View>

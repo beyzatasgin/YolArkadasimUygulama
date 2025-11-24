@@ -9,21 +9,21 @@ export default function TabLayout() {
     }}>
         <Tabs.Screen name="mytrip"
         options={{
-          tabBarLabel:'My Trip',
+          tabBarLabel:'Seyahatlerim',
           tabBarIcon:({color})=><Ionicons name="location-sharp"
            size={24} color={color}/>
         }}
         />
         <Tabs.Screen name="discover"
         options={{
-          tabBarLabel:'Discover',
+          tabBarLabel:'Keşfet',
           tabBarIcon:({color})=><Ionicons name="globe-sharp"
            size={24} color={color} />
         }}
            />
         <Tabs.Screen name="profile"
         options={{
-          tabBarLabel:'Profile',
+          tabBarLabel:'Profil',
           tabBarIcon:({color})=><Ionicons name="people-circle" 
           size={24} color={color} />
         }}

@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation, useRouter } from 'expo-router';
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, ToastAndroid, TouchableOpacity, View } from 'react-native';
 import { auth } from './../../../configs/FirebaseConfig';
@@ -15,20 +15,33 @@ export default function SignUp() {
     navigation.setOptions({
       headerShown:false
     })
-  },[]);
+  },[navigation]);
 
   const OnCreateAccount=()=>{
    
     if(!email&&!password&&!fullName)
     {
-      ToastAndroid.show('Please enter all details',ToastAndroid.LONG);
+      ToastAndroid.show('Lütfen tüm bilgileri girin',ToastAndroid.LONG);
       return;
     }
 
    createUserWithEmailAndPassword(auth, email, password)
-  .then((userCredential) => {
+  .then(async (userCredential) => {
     // Signed up 
     const user = userCredential.user;
+    
+    // Kullanıcı adını ayarla (fotoğraf boş kalacak)
+    if (fullName) {
+      try {
+        await updateProfile(user, {
+          displayName: fullName,
+          // photoURL eklemiyoruz, böylece boş kalacak
+        });
+      } catch (error) {
+        console.error('Profil güncelleme hatası:', error);
+      }
+    }
+    
      router.replace('/mytrip')
     console.log(user);
     // ...
@@ -60,17 +73,17 @@ export default function SignUp() {
         fontSize:30,
         marginTop:30
 
-      }}>Create New Account</Text>
+      }}>Yeni Hesap Oluştur</Text>
        {/* User Full Name*/}
        <View style={{
           marginTop:50
         }}>
            <Text style={{
             fontFamily:'outfit'
-           }}> Full Name  </Text>
+           }}> Ad Soyad  </Text>
            <TextInput
           style={styles.input}
-          placeholder='Enter Full Name'
+          placeholder='Ad ve soyadınızı girin'
           onChangeText={(value)=>setFullName(value)}
           />
          </View>
@@ -81,11 +94,11 @@ export default function SignUp() {
         }}>
            <Text style={{
             fontFamily:'outfit'
-           }}>   Email  </Text>
+           }}>   E-posta  </Text>
            <TextInput
           style={styles.input}
           onChangeText={(value)=>setEmail(value)}
-          placeholder='Enter Email'/>
+          placeholder='E-posta adresinizi girin'/>
          </View>
       {/* Password*/}
        <View style={{
@@ -93,15 +106,15 @@ export default function SignUp() {
         }}>
            <Text style={{
             fontFamily:'outfit'
-           }}>  Password </Text>
+           }}>  Şifre </Text>
            <TextInput
           secureTextEntry={true}
           style={styles.input}
           onChangeText={(value)=>setPassword(value)}
-          placeholder='Enter Password'/>
+          placeholder='Şifrenizi girin'/>
           </View>
 
-          {/*Sign In Button*/}
+          {/*Create Account Button*/}
               <TouchableOpacity onPress={OnCreateAccount} style={{
                 padding:15,
                 backgroundColor:Colors.PRIMARY,
@@ -111,10 +124,10 @@ export default function SignUp() {
                 <Text style={{
                   color:Colors.WHITE,
                   textAlign:'center'
-                }}>Create Account</Text>
+                }}>Hesap Oluştur</Text>
               </TouchableOpacity>
           
-               {/*Cerate Account Button*/}
+               {/*Sign In Button*/}
               <TouchableOpacity
                 onPress={()=>router.replace('auth/sign-in')}
                 style={{
@@ -127,7 +140,7 @@ export default function SignUp() {
                 <Text style={{
                   color:Colors.PRIMARY,
                   textAlign:'center'
-                }}>Sign In</Text>
+                }}>Giriş Yap</Text>
               </TouchableOpacity>
     </View>
   )

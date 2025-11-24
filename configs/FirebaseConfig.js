@@ -4,6 +4,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { initializeApp } from "firebase/app";
 import { getReactNativePersistence, initializeAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 // 🔐 Firebase proje yapılandırman
 const firebaseConfig = {
@@ -19,6 +20,7 @@ const firebaseConfig = {
 let app = null;
 let auth = null;
 let db = null;
+let storage = null;
 
 try {
   app = initializeApp(firebaseConfig);
@@ -30,6 +32,9 @@ try {
 
   // 🗃️ Firestore veritabanı (isteğe bağlı)
   db = getFirestore(app);
+  
+  // 📦 Firebase Storage (fotoğraf yükleme için)
+  storage = getStorage(app);
   
   console.log("✅ Firebase initialized successfully");
 } catch (error) {
@@ -70,5 +75,5 @@ if (!auth) {
   };
 }
 
-export { app, auth, db };
+export { app, auth, db, storage };
 

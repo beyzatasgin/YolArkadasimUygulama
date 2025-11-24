@@ -1,11 +1,19 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
+import { useContext } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
+import { CreateTripContext, defaultTripData } from '../../context/CreateTripContext';
 
 export default function StartNewTripCard() {
+   const router = useRouter();
+   const { setTripData } = useContext(CreateTripContext);
 
-   const router=useRouter();
+   const handleStartNewTrip = () => {
+     // Context'i temizle - yeni seyahat için
+     setTripData(defaultTripData);
+     router.push('/create-trip/search-place');
+   };
 
   return (
     <View 
@@ -21,7 +29,7 @@ export default function StartNewTripCard() {
     fontSize:25,
     fontFamily:'outfit-medium'
  }}>
-    No Trips planned yet
+    Henüz Planlanmış Seyahat Yok
  </Text>
 
   <Text style={{
@@ -29,11 +37,11 @@ export default function StartNewTripCard() {
     fontFamily:'outfit',
     textAlign:'center',
     color:Colors.GRAY
- }}>
-    Looks like its time to plan a new travel experinece! Get Started below
+  }}>
+    Yeni bir seyahat deneyimi planlama zamanı geldi! Aşağıdan başlayın
  </Text>
  <TouchableOpacity 
- onPress={()=>router.push('/create-trip/search-place')}
+ onPress={handleStartNewTrip}
  style ={{
     padding:15,
     backgroundColor:Colors.PRIMARY,
@@ -46,7 +54,7 @@ export default function StartNewTripCard() {
         fontFamily:'outfit-medium',
         fontSize:17
     }}>
-        Start a new trip
+        Yeni Seyahat Başlat
     </Text>
  </TouchableOpacity>
     </View>
