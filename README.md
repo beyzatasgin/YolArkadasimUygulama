@@ -2,7 +2,7 @@
 
 Modern ve kullanıcı dostu bir seyahat planlama uygulaması. AI destekli önerilerle kişiselleştirilmiş seyahat deneyimleri sunar.
 
-## 🚀 Özellikler
+##  Özellikler
 
 - **AI Destekli Seyahat Planlama**: Yapay zeka ile kişiselleştirilmiş seyahat önerileri
 - **OpenStreetMap Entegrasyonu**: Ücretsiz ve açık kaynak yer arama ve detayları
@@ -10,7 +10,7 @@ Modern ve kullanıcı dostu bir seyahat planlama uygulaması. AI destekli öneri
 - **Modern UI/UX**: React Native ve Expo ile geliştirilmiş responsive tasarım
 - **Çoklu Platform Desteği**: iOS, Android ve Web
 
-## 📱 Teknolojiler
+##  Teknolojiler
 
 - **React Native** - Mobil uygulama geliştirme
 - **Expo** - Geliştirme ve dağıtım platformu
@@ -19,7 +19,7 @@ Modern ve kullanıcı dostu bir seyahat planlama uygulaması. AI destekli öneri
 - **TypeScript** - Tip güvenliği
 - **Expo Router** - Navigasyon
 
-## 🛠️ Kurulum
+##  Kurulum
 
 1. **Projeyi klonlayın**
    ```bash
@@ -62,14 +62,14 @@ Modern ve kullanıcı dostu bir seyahat planlama uygulaması. AI destekli öneri
    npm start
    ```
 
-## 🔧 Geliştirme
+##  Geliştirme
 
 - **Linting**: `npm run lint`
 - **Android**: `npm run android`
 - **iOS**: `npm run ios`
 - **Web**: `npm run web`
 
-## 📁 Proje Yapısı
+##  Proje Yapısı
 
 ```
 yolarkadasim/
@@ -84,24 +84,11 @@ yolarkadasim/
 └── assets/               # Statik dosyalar
 ```
 
-## 🔐 Güvenlik
+##  Güvenlik
 
 - Firebase API anahtarları environment variables ile korunur
 - Kullanıcı verileri Firebase Authentication ile güvenli şekilde yönetilir
 - OpenStreetMap Nominatim API kullanımı için User-Agent header'ı yapılandırılmıştır
 
-## 📄 Lisans
 
-Bu proje MIT lisansı altında lisanslanmıştır.
 
-## 🤝 Katkıda Bulunma
-
-1. Fork yapın
-2. Feature branch oluşturun (`git checkout -b feature/amazing-feature`)
-3. Commit yapın (`git commit -m 'Add amazing feature'`)
-4. Push yapın (`git push origin feature/amazing-feature`)
-5. Pull Request oluşturun
-
-## 📞 İletişim
-
-Proje hakkında sorularınız için issue açabilir veya iletişime geçebilirsiniz.
