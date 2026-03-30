@@ -1,7 +1,14 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useNavigation, useRouter } from 'expo-router';
-import { collection, deleteDoc, doc, onSnapshot, orderBy, query, where } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useNavigation, useRouter } from "expo-router";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  query,
+  where,
+} from "firebase/firestore";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -11,9 +18,13 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { auth, db } from '../configs/FirebaseConfig';
-import { Colors } from '../constants/Colors';
+} from "react-native";
+import { auth, db, firebaseInitError } from "../configs/FirebaseConfig";
+import {
+  FIREBASE_AUTH_INIT_ERROR_TITLE,
+  getFirebaseAuthInitErrorMessage,
+} from "../configs/FirebaseMessages";
+import { Colors } from "../constants/Colors";
 
 export default function SavedPlaces() {
   const navigation = useNavigation();
@@ -25,7 +36,7 @@ export default function SavedPlaces() {
     navigation.setOptions({
       headerShown: true,
       headerTransparent: true,
-      headerTitle: 'Kaydedilen Yerler',
+      headerTitle: "Kaydedilen Yerler",
       headerLeft: () => (
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="black" />
@@ -35,15 +46,22 @@ export default function SavedPlaces() {
   }, [navigation, router]);
 
   useEffect(() => {
-    if (!auth.currentUser || !db) {
+    if (!auth) {
+      const initMessage = getFirebaseAuthInitErrorMessage(firebaseInitError);
+      Alert.alert(FIREBASE_AUTH_INIT_ERROR_TITLE, initMessage);
       setLoading(false);
       return;
     }
 
-    const savedPlacesRef = collection(db, 'savedPlaces');
+    if (!auth?.currentUser || !db) {
+      setLoading(false);
+      return;
+    }
+
+    const savedPlacesRef = collection(db, "savedPlaces");
     const q = query(
       savedPlacesRef,
-      where('userId', '==', auth.currentUser.uid)
+      where("userId", "==", auth?.currentUser?.uid),
     );
 
     const unsubscribe = onSnapshot(
@@ -68,13 +86,15 @@ export default function SavedPlaces() {
         setLoading(false);
       },
       (error) => {
-        console.error('Error fetching saved places:', error);
+        console.error("Error fetching saved places:", error);
         // Composite index hatası için fallback
-        if (error.code === 'failed-precondition') {
-          console.warn('⚠️ Firestore composite index gerekiyor. Sadece userId ile filtreleme yapılıyor.');
+        if (error.code === "failed-precondition") {
+          console.warn(
+            "⚠️ Firestore composite index gerekiyor. Sadece userId ile filtreleme yapılıyor.",
+          );
         }
         setLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe();
@@ -82,52 +102,63 @@ export default function SavedPlaces() {
 
   const handleDeletePlace = async (placeId) => {
     Alert.alert(
-      'Yeri Kaldır',
-      'Bu yeri kaydedilenlerden kaldırmak istediğinizden emin misiniz?',
+      "Yeri Kaldır",
+      "Bu yeri kaydedilenlerden kaldırmak istediğinizden emin misiniz?",
       [
-        { text: 'İptal', style: 'cancel' },
+        { text: "İptal", style: "cancel" },
         {
-          text: 'Kaldır',
-          style: 'destructive',
+          text: "Kaldır",
+          style: "destructive",
           onPress: async () => {
             try {
-              await deleteDoc(doc(db, 'savedPlaces', placeId));
+              await deleteDoc(doc(db, "savedPlaces", placeId));
             } catch (error) {
-              console.error('Error deleting place:', error);
-              Alert.alert('Hata', 'Yer kaldırılırken bir hata oluştu.');
+              console.error("Error deleting place:", error);
+              Alert.alert("Hata", "Yer kaldırılırken bir hata oluştu.");
             }
           },
         },
-      ]
+      ],
     );
   };
 
   const openInMaps = (place) => {
     if (place.coordinates) {
       const { lat, lon } = place.coordinates;
-      const url = place.url || `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}&zoom=15`;
+      const url =
+        place.url ||
+        `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}&zoom=15`;
       Linking.openURL(url).catch((err) => {
-        console.error('Maps açma hatası:', err);
-        Alert.alert('Hata', 'Harita açılamadı');
+        console.error("Maps açma hatası:", err);
+        Alert.alert("Hata", "Harita açılamadı");
       });
     }
   };
 
   const formatDate = (date) => {
-    if (!date) return '';
+    if (!date) return "";
     const dateObj = date instanceof Date ? date : new Date(date);
-    return dateObj.toLocaleDateString('tr-TR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
+    return dateObj.toLocaleDateString("tr-TR", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
     });
   };
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.WHITE }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: Colors.WHITE,
+        }}
+      >
         <ActivityIndicator size="large" color={Colors.PRIMARY} />
-        <Text style={{ fontFamily: 'outfit', color: Colors.GRAY, marginTop: 10 }}>
+        <Text
+          style={{ fontFamily: "outfit", color: Colors.GRAY, marginTop: 10 }}
+        >
           Yükleniyor...
         </Text>
       </View>
@@ -138,56 +169,70 @@ export default function SavedPlaces() {
     <ScrollView style={{ flex: 1, backgroundColor: Colors.WHITE }}>
       <View style={{ padding: 25, paddingTop: 75 }}>
         {savedPlaces.length === 0 ? (
-          <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 100 }}>
+          <View
+            style={{
+              alignItems: "center",
+              justifyContent: "center",
+              paddingTop: 100,
+            }}
+          >
             <Ionicons name="heart-outline" size={80} color={Colors.GRAY} />
-            <Text style={{ 
-              fontFamily: 'outfit-bold', 
-              fontSize: 24, 
-              color: Colors.PRIMARY, 
-              marginTop: 20,
-              marginBottom: 10
-            }}>
+            <Text
+              style={{
+                fontFamily: "outfit-bold",
+                fontSize: 24,
+                color: Colors.PRIMARY,
+                marginTop: 20,
+                marginBottom: 10,
+              }}
+            >
               Henüz Kaydedilen Yer Yok
             </Text>
-            <Text style={{ 
-              fontFamily: 'outfit', 
-              fontSize: 16, 
-              color: Colors.GRAY,
-              textAlign: 'center',
-              marginBottom: 30
-            }}>
+            <Text
+              style={{
+                fontFamily: "outfit",
+                fontSize: 16,
+                color: Colors.GRAY,
+                textAlign: "center",
+                marginBottom: 30,
+              }}
+            >
               Keşfet sayfasından beğendiğiniz yerleri kaydedebilirsiniz
             </Text>
             <TouchableOpacity
-              onPress={() => router.push('/(tabs)/discover')}
+              onPress={() => router.push("/(tabs)/discover")}
               style={{
                 paddingHorizontal: 30,
                 paddingVertical: 15,
                 backgroundColor: Colors.PRIMARY,
                 borderRadius: 15,
-                flexDirection: 'row',
-                alignItems: 'center',
+                flexDirection: "row",
+                alignItems: "center",
                 gap: 10,
               }}
             >
               <Ionicons name="globe" size={20} color={Colors.WHITE} />
-              <Text style={{ 
-                color: Colors.WHITE, 
-                fontFamily: 'outfit-medium',
-                fontSize: 16
-              }}>
+              <Text
+                style={{
+                  color: Colors.WHITE,
+                  fontFamily: "outfit-medium",
+                  fontSize: 16,
+                }}
+              >
                 Keşfet Sayfasına Git
               </Text>
             </TouchableOpacity>
           </View>
         ) : (
           <>
-            <Text style={{ 
-              fontFamily: 'outfit', 
-              fontSize: 14, 
-              color: Colors.GRAY,
-              marginBottom: 20
-            }}>
+            <Text
+              style={{
+                fontFamily: "outfit",
+                fontSize: 14,
+                color: Colors.GRAY,
+                marginBottom: 20,
+              }}
+            >
               {savedPlaces.length} kaydedilen yer
             </Text>
 
@@ -198,10 +243,10 @@ export default function SavedPlaces() {
                   backgroundColor: Colors.WHITE,
                   borderRadius: 20,
                   marginBottom: 20,
-                  overflow: 'hidden',
+                  overflow: "hidden",
                   borderWidth: 1,
-                  borderColor: '#E5E7EB',
-                  shadowColor: '#000',
+                  borderColor: "#E5E7EB",
+                  shadowColor: "#000",
                   shadowOffset: { width: 0, height: 2 },
                   shadowOpacity: 0.1,
                   shadowRadius: 4,
@@ -214,7 +259,7 @@ export default function SavedPlaces() {
                   <Image
                     source={{ uri: place.photoUrl }}
                     style={{
-                      width: '100%',
+                      width: "100%",
                       height: 180,
                     }}
                     resizeMode="cover"
@@ -222,26 +267,47 @@ export default function SavedPlaces() {
                 )}
 
                 <View style={{ padding: 20 }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      marginBottom: 10,
+                    }}
+                  >
                     <View style={{ flex: 1 }}>
-                      <Text style={{ 
-                        fontFamily: 'outfit-bold', 
-                        fontSize: 20, 
-                        color: Colors.PRIMARY, 
-                        marginBottom: 5 
-                      }}>
+                      <Text
+                        style={{
+                          fontFamily: "outfit-bold",
+                          fontSize: 20,
+                          color: Colors.PRIMARY,
+                          marginBottom: 5,
+                        }}
+                      >
                         {place.name}
                       </Text>
                       {place.address && (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 5 }}>
-                          <Ionicons name="location" size={16} color={Colors.GRAY} />
-                          <Text style={{ 
-                            fontFamily: 'outfit', 
-                            fontSize: 14, 
-                            color: Colors.GRAY, 
-                            marginLeft: 5,
-                            flex: 1
-                          }}>
+                        <View
+                          style={{
+                            flexDirection: "row",
+                            alignItems: "center",
+                            marginBottom: 5,
+                          }}
+                        >
+                          <Ionicons
+                            name="location"
+                            size={16}
+                            color={Colors.GRAY}
+                          />
+                          <Text
+                            style={{
+                              fontFamily: "outfit",
+                              fontSize: 14,
+                              color: Colors.GRAY,
+                              marginLeft: 5,
+                              flex: 1,
+                            }}
+                          >
                             {place.address}
                           </Text>
                         </View>
@@ -252,7 +318,7 @@ export default function SavedPlaces() {
                       style={{
                         padding: 8,
                         borderRadius: 20,
-                        backgroundColor: '#FEE2E2',
+                        backgroundColor: "#FEE2E2",
                       }}
                     >
                       <Ionicons name="heart" size={20} color="#EF4444" />
@@ -260,12 +326,14 @@ export default function SavedPlaces() {
                   </View>
 
                   {place.savedAt && (
-                    <Text style={{ 
-                      fontFamily: 'outfit', 
-                      fontSize: 12, 
-                      color: Colors.GRAY,
-                      marginTop: 5
-                    }}>
+                    <Text
+                      style={{
+                        fontFamily: "outfit",
+                        fontSize: 12,
+                        color: Colors.GRAY,
+                        marginTop: 5,
+                      }}
+                    >
                       {formatDate(place.savedAt)} tarihinde kaydedildi
                     </Text>
                   )}
@@ -276,20 +344,26 @@ export default function SavedPlaces() {
                       marginTop: 15,
                       paddingVertical: 12,
                       paddingHorizontal: 16,
-                      backgroundColor: '#F0F9FF',
+                      backgroundColor: "#F0F9FF",
                       borderRadius: 12,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "center",
                       gap: 8,
                     }}
                   >
-                    <Ionicons name="map-outline" size={18} color={Colors.PRIMARY} />
-                    <Text style={{ 
-                      fontFamily: 'outfit-medium', 
-                      fontSize: 14, 
-                      color: Colors.PRIMARY
-                    }}>
+                    <Ionicons
+                      name="map-outline"
+                      size={18}
+                      color={Colors.PRIMARY}
+                    />
+                    <Text
+                      style={{
+                        fontFamily: "outfit-medium",
+                        fontSize: 14,
+                        color: Colors.PRIMARY,
+                      }}
+                    >
                       Haritada Görüntüle
                     </Text>
                   </TouchableOpacity>
@@ -302,4 +376,3 @@ export default function SavedPlaces() {
     </ScrollView>
   );
 }
-
