@@ -1,52 +1,107 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useNavigation, useRouter } from 'expo-router';
-import { useContext, useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { Colors } from '../../constants/Colors';
-import { CreateTripContext } from '../../context/CreateTripContext';
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useNavigation, useRouter } from "expo-router";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useState,
+} from "react";
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Colors } from "../../constants/Colors";
+import { CreateTripContext } from "../../context/CreateTripContext";
 
 export default function SelectBudget() {
   const navigation = useNavigation();
   const router = useRouter();
   const { tripData, setTripData } = useContext(CreateTripContext);
 
-  const [selectedBudget, setSelectedBudget] = useState(tripData?.budget || null);
-  const [customBudget, setCustomBudget] = useState(tripData?.budget ? String(tripData.budget) : '');
+  const handleGoBack = useCallback(() => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    router.replace("/create-trip/select-date");
+  }, [navigation, router]);
+
+  const [selectedBudget, setSelectedBudget] = useState(
+    tripData?.budget || null,
+  );
+  const [customBudget, setCustomBudget] = useState(
+    tripData?.budget ? String(tripData.budget) : "",
+  );
   const [showCustomInput, setShowCustomInput] = useState(false);
 
   // Context'teki bütçeyi yükle
   useEffect(() => {
-    if (tripData?.budget && !selectedBudget) {
-      setSelectedBudget(tripData.budget);
+    if (tripData?.budget) {
+      setSelectedBudget((prev) => prev || tripData.budget);
     }
-  }, [tripData]);
+  }, [tripData?.budget]);
 
   // Önceden tanımlı bütçe seçenekleri
   const budgetOptions = [
-    { label: 'Ekonomik', value: 500, icon: 'wallet-outline', description: '₺500 - ₺1,000' },
-    { label: 'Orta', value: 2000, icon: 'cash-outline', description: '₺1,000 - ₺3,000' },
-    { label: 'Lüks', value: 5000, icon: 'diamond-outline', description: '₺3,000 - ₺7,000' },
-    { label: 'Premium', value: 10000, icon: 'star-outline', description: '₺7,000+' },
+    {
+      label: "Ekonomik",
+      value: 500,
+      icon: "wallet-outline",
+      description: "₺500 - ₺1,000",
+    },
+    {
+      label: "Orta",
+      value: 2000,
+      icon: "cash-outline",
+      description: "₺1,000 - ₺3,000",
+    },
+    {
+      label: "Lüks",
+      value: 5000,
+      icon: "diamond-outline",
+      description: "₺3,000 - ₺7,000",
+    },
+    {
+      label: "Premium",
+      value: 10000,
+      icon: "star-outline",
+      description: "₺7,000+",
+    },
   ];
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: true,
-      headerTransparent: true,
-      headerTitle: 'Bütçe Seç',
+      headerTransparent: false,
+      headerStyle: {
+        backgroundColor: Colors.WHITE,
+      },
+      headerShadowVisible: false,
+      headerTitle: "Bütçe Seç",
       headerLeft: () => (
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity
+          onPress={handleGoBack}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          style={{ paddingHorizontal: 6, paddingVertical: 6 }}
+        >
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
       ),
     });
-  }, [navigation, router]);
+  }, [handleGoBack, navigation]);
 
   // Bütçe seçeneği seçildiğinde
   const handleBudgetSelect = (value) => {
     setSelectedBudget(value);
     setShowCustomInput(false);
-    setCustomBudget('');
+    setCustomBudget("");
   };
 
   // Özel bütçe girişi
@@ -59,7 +114,7 @@ export default function SelectBudget() {
   const handleSaveCustomBudget = () => {
     const budget = parseFloat(customBudget);
     if (isNaN(budget) || budget <= 0) {
-      Alert.alert('Hata', 'Lütfen geçerli bir bütçe miktarı girin');
+      Alert.alert("Hata", "Lütfen geçerli bir bütçe miktarı girin");
       return;
     }
     setSelectedBudget(budget);
@@ -69,7 +124,7 @@ export default function SelectBudget() {
   // Devam et
   const handleContinue = () => {
     if (!selectedBudget) {
-      Alert.alert('Hata', 'Lütfen bir bütçe seçin veya özel bütçe girin');
+      Alert.alert("Hata", "Lütfen bir bütçe seçin veya özel bütçe girin");
       return;
     }
 
@@ -82,14 +137,14 @@ export default function SelectBudget() {
     setTripData(updatedTripData);
 
     // Review Trip sayfasına geç
-    router.push('/create-trip/review-trip');
+    router.push("/create-trip/review-trip");
   };
 
   // Bütçe formatı
   const formatBudget = (amount) => {
-    return new Intl.NumberFormat('tr-TR', {
-      style: 'currency',
-      currency: 'TRY',
+    return new Intl.NumberFormat("tr-TR", {
+      style: "currency",
+      currency: "TRY",
       minimumFractionDigits: 0,
     }).format(amount);
   };
@@ -100,7 +155,8 @@ export default function SelectBudget() {
         {/* Başlık */}
         <Text style={styles.title}>Bütçenizi Seçin</Text>
         <Text style={styles.subtitle}>
-          Seyahatiniz için ne kadar harcamak istersiniz? Bu bilgi size özel öneriler sunmamıza yardımcı olur.
+          Seyahatiniz için ne kadar harcamak istersiniz? Bu bilgi size özel
+          öneriler sunmamıza yardımcı olur.
         </Text>
 
         {/* Bütçe Seçenekleri */}
@@ -119,12 +175,17 @@ export default function SelectBudget() {
                 <Ionicons
                   name={option.icon}
                   size={32}
-                  color={selectedBudget === option.value ? Colors.WHITE : Colors.PRIMARY}
+                  color={
+                    selectedBudget === option.value
+                      ? Colors.WHITE
+                      : Colors.PRIMARY
+                  }
                 />
                 <Text
                   style={[
                     styles.budgetLabel,
-                    selectedBudget === option.value && styles.budgetLabelSelected,
+                    selectedBudget === option.value &&
+                      styles.budgetLabelSelected,
                   ]}
                 >
                   {option.label}
@@ -132,14 +193,19 @@ export default function SelectBudget() {
                 <Text
                   style={[
                     styles.budgetDescription,
-                    selectedBudget === option.value && styles.budgetDescriptionSelected,
+                    selectedBudget === option.value &&
+                      styles.budgetDescriptionSelected,
                   ]}
                 >
                   {option.description}
                 </Text>
                 {selectedBudget === option.value && (
                   <View style={styles.selectedIndicator}>
-                    <Ionicons name="checkmark-circle" size={24} color={Colors.WHITE} />
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={24}
+                      color={Colors.WHITE}
+                    />
                   </View>
                 )}
               </TouchableOpacity>
@@ -199,11 +265,14 @@ export default function SelectBudget() {
             <Text style={styles.summaryTitle}>Seçilen Bütçe</Text>
             <View style={styles.summaryRow}>
               <Ionicons name="wallet" size={24} color={Colors.PRIMARY} />
-              <Text style={styles.summaryAmount}>{formatBudget(selectedBudget)}</Text>
+              <Text style={styles.summaryAmount}>
+                {formatBudget(selectedBudget)}
+              </Text>
             </View>
             {tripData?.duration && (
               <Text style={styles.summaryPerDay}>
-                Günlük: {formatBudget(Math.round(selectedBudget / tripData.duration))}
+                Günlük:{" "}
+                {formatBudget(Math.round(selectedBudget / tripData.duration))}
               </Text>
             )}
           </View>
@@ -215,7 +284,7 @@ export default function SelectBudget() {
           <View style={styles.tripSummaryRow}>
             <Text style={styles.tripSummaryLabel}>Yer:</Text>
             <Text style={styles.tripSummaryValue}>
-              {tripData?.selectedPlace?.name || 'Seçilmedi'}
+              {tripData?.selectedPlace?.name || "Seçilmedi"}
             </Text>
           </View>
           {tripData?.startDate && tripData?.endDate && (
@@ -223,12 +292,14 @@ export default function SelectBudget() {
               <Text style={styles.tripSummaryLabel}>Tarih:</Text>
               <Text style={styles.tripSummaryValue}>
                 {tripData.startDate instanceof Date
-                  ? tripData.startDate.toLocaleDateString('tr-TR')
-                  : new Date(tripData.startDate).toLocaleDateString('tr-TR')}{' '}
-                -{' '}
+                  ? tripData.startDate.toLocaleDateString("tr-TR")
+                  : new Date(tripData.startDate).toLocaleDateString(
+                      "tr-TR",
+                    )}{" "}
+                -{" "}
                 {tripData.endDate instanceof Date
-                  ? tripData.endDate.toLocaleDateString('tr-TR')
-                  : new Date(tripData.endDate).toLocaleDateString('tr-TR')}
+                  ? tripData.endDate.toLocaleDateString("tr-TR")
+                  : new Date(tripData.endDate).toLocaleDateString("tr-TR")}
               </Text>
             </View>
           )}
@@ -266,17 +337,17 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 25,
-    paddingTop: 75,
+    paddingTop: 24,
   },
   title: {
     fontSize: 28,
-    fontFamily: 'outfit-bold',
+    fontFamily: "outfit-bold",
     color: Colors.PRIMARY,
     marginBottom: 10,
   },
   subtitle: {
     fontSize: 16,
-    fontFamily: 'outfit',
+    fontFamily: "outfit",
     color: Colors.GRAY,
     marginBottom: 30,
     lineHeight: 22,
@@ -286,24 +357,24 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontFamily: 'outfit-medium',
+    fontFamily: "outfit-medium",
     color: Colors.PRIMARY,
     marginBottom: 15,
   },
   budgetGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 15,
   },
   budgetCard: {
-    width: '47%',
+    width: "47%",
     padding: 20,
     borderWidth: 2,
     borderColor: Colors.GRAY,
     borderRadius: 15,
     backgroundColor: Colors.WHITE,
-    alignItems: 'center',
-    position: 'relative',
+    alignItems: "center",
+    position: "relative",
     minHeight: 140,
   },
   budgetCardSelected: {
@@ -312,7 +383,7 @@ const styles = StyleSheet.create({
   },
   budgetLabel: {
     fontSize: 16,
-    fontFamily: 'outfit-bold',
+    fontFamily: "outfit-bold",
     color: Colors.PRIMARY,
     marginTop: 10,
     marginBottom: 5,
@@ -322,22 +393,22 @@ const styles = StyleSheet.create({
   },
   budgetDescription: {
     fontSize: 12,
-    fontFamily: 'outfit',
+    fontFamily: "outfit",
     color: Colors.GRAY,
-    textAlign: 'center',
+    textAlign: "center",
   },
   budgetDescriptionSelected: {
     color: Colors.WHITE,
   },
   selectedIndicator: {
-    position: 'absolute',
+    position: "absolute",
     top: 10,
     right: 10,
   },
   customBudgetButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     padding: 18,
     borderWidth: 2,
     borderColor: Colors.GRAY,
@@ -350,7 +421,7 @@ const styles = StyleSheet.create({
   },
   customBudgetText: {
     fontSize: 16,
-    fontFamily: 'outfit-medium',
+    fontFamily: "outfit-medium",
     color: Colors.PRIMARY,
     marginLeft: 10,
   },
@@ -360,12 +431,12 @@ const styles = StyleSheet.create({
   customInputContainer: {
     marginTop: 15,
     padding: 15,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: "#F8F9FA",
     borderRadius: 15,
   },
   customInputLabel: {
     fontSize: 14,
-    fontFamily: 'outfit-medium',
+    fontFamily: "outfit-medium",
     color: Colors.PRIMARY,
     marginBottom: 10,
   },
@@ -376,7 +447,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: Colors.WHITE,
     fontSize: 16,
-    fontFamily: 'outfit',
+    fontFamily: "outfit",
     color: Colors.PRIMARY,
     marginBottom: 15,
   },
@@ -384,73 +455,73 @@ const styles = StyleSheet.create({
     padding: 12,
     backgroundColor: Colors.PRIMARY,
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
   saveCustomButtonText: {
     fontSize: 16,
-    fontFamily: 'outfit-medium',
+    fontFamily: "outfit-medium",
     color: Colors.WHITE,
   },
   summary: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: "#F8F9FA",
     padding: 20,
     borderRadius: 15,
     marginBottom: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   summaryTitle: {
     fontSize: 16,
-    fontFamily: 'outfit-medium',
+    fontFamily: "outfit-medium",
     color: Colors.GRAY,
     marginBottom: 10,
   },
   summaryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   summaryAmount: {
     fontSize: 32,
-    fontFamily: 'outfit-bold',
+    fontFamily: "outfit-bold",
     color: Colors.PRIMARY,
   },
   summaryPerDay: {
     fontSize: 14,
-    fontFamily: 'outfit',
+    fontFamily: "outfit",
     color: Colors.GRAY,
     marginTop: 8,
   },
   tripSummary: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: "#F8F9FA",
     padding: 20,
     borderRadius: 15,
     marginBottom: 30,
   },
   tripSummaryTitle: {
     fontSize: 18,
-    fontFamily: 'outfit-bold',
+    fontFamily: "outfit-bold",
     color: Colors.PRIMARY,
     marginBottom: 15,
   },
   tripSummaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: 10,
   },
   tripSummaryLabel: {
     fontSize: 14,
-    fontFamily: 'outfit',
+    fontFamily: "outfit",
     color: Colors.GRAY,
   },
   tripSummaryValue: {
     fontSize: 14,
-    fontFamily: 'outfit-medium',
+    fontFamily: "outfit-medium",
     color: Colors.PRIMARY,
   },
   continueButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     padding: 18,
     backgroundColor: Colors.PRIMARY,
     borderRadius: 15,
@@ -462,9 +533,8 @@ const styles = StyleSheet.create({
   },
   continueButtonText: {
     fontSize: 18,
-    fontFamily: 'outfit-medium',
+    fontFamily: "outfit-medium",
     color: Colors.WHITE,
     marginRight: 10,
   },
 });
-

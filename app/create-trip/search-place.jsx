@@ -1,13 +1,29 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { useNavigation, useRouter } from 'expo-router';
-import { useContext, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, ImageBackground, Linking, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { Colors } from '../../constants/Colors';
-import { CreateTripContext } from './../../context/CreateTripContext';
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useNavigation, useRouter } from "expo-router";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useState,
+} from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  ImageBackground,
+  Linking,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Colors } from "../../constants/Colors";
+import { CreateTripContext } from "./../../context/CreateTripContext";
 export default function SearchPlace() {
   const navigation = useNavigation();
-  const {tripData,setTripData}=useContext(CreateTripContext);
-  const [searchText, setSearchText] = useState('');
+  const { tripData, setTripData } = useContext(CreateTripContext);
+  const [searchText, setSearchText] = useState("");
   const [predictions, setPredictions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState(null);
@@ -15,15 +31,35 @@ export default function SearchPlace() {
   const [lastSearchTime, setLastSearchTime] = useState(0);
   const router = useRouter();
 
-  useEffect(() => {
+  const handleGoBack = useCallback(() => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    router.replace("/mytrip");
+  }, [navigation, router]);
+
+  useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: true,
-      headerTransparent: true,
-      headerTitle: 'Yer Ara',
+      headerTransparent: false,
+      headerStyle: {
+        backgroundColor: Colors.WHITE,
+      },
+      headerShadowVisible: false,
+      headerTitle: "Yer Ara",
+      headerLeft: () => (
+        <TouchableOpacity
+          onPress={handleGoBack}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          style={{ paddingHorizontal: 6, paddingVertical: 6 }}
+        >
+          <Ionicons name="arrow-back" size={24} color="black" />
+        </TouchableOpacity>
+      ),
     });
-
-    console.log(tripData);
-  }, [tripData, navigation]);
+  }, [handleGoBack, navigation]);
 
   // 🔹 Yer arama (autocomplete) - OpenStreetMap Nominatim API (Retry ve Timeout ile)
   const searchPlaces = async (text, retryCount = 0) => {
@@ -33,7 +69,7 @@ export default function SearchPlace() {
     }
 
     setLoading(true);
-    
+
     // Timeout kontrolü için AbortController
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 saniye timeout
@@ -41,15 +77,15 @@ export default function SearchPlace() {
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-          text
+          text,
         )}&format=json&limit=8&addressdetails=1&extratags=1&namedetails=1&countrycodes=tr&accept-language=tr`,
         {
           headers: {
-            'User-Agent': 'YolArkadasim/1.0', // Nominatim için gerekli
-            'Accept': 'application/json',
+            "User-Agent": "YolArkadasim/1.0", // Nominatim için gerekli
+            Accept: "application/json",
           },
           signal: controller.signal, // Timeout kontrolü
-        }
+        },
       );
 
       clearTimeout(timeoutId); // Başarılı ise timeout'u temizle
@@ -67,8 +103,10 @@ export default function SearchPlace() {
           place_id: place.place_id || place.osm_id,
           description: place.display_name,
           structured_formatting: {
-            main_text: place.name || place.display_name?.split(',')[0] || 'Bilinmeyen',
-            secondary_text: place.display_name?.split(',').slice(1).join(',').trim() || '',
+            main_text:
+              place.name || place.display_name?.split(",")[0] || "Bilinmeyen",
+            secondary_text:
+              place.display_name?.split(",").slice(1).join(",").trim() || "",
           },
           lat: parseFloat(place.lat),
           lon: parseFloat(place.lon),
@@ -80,11 +118,13 @@ export default function SearchPlace() {
       }
     } catch (error) {
       clearTimeout(timeoutId); // Hata durumunda timeout'u temizle
-      
+
       // Abort hatası (timeout)
-      if (error.name === 'AbortError') {
-        console.warn('⚠️ Nominatim API timeout - istek 15 saniye içinde tamamlanamadı');
-        
+      if (error.name === "AbortError") {
+        console.warn(
+          "⚠️ Nominatim API timeout - istek 15 saniye içinde tamamlanamadı",
+        );
+
         // Retry mekanizması (maksimum 1 deneme - rate limit'i önlemek için)
         if (retryCount < 1) {
           console.log(`🔄 Nominatim API retry denemesi ${retryCount + 1}/1...`);
@@ -92,17 +132,24 @@ export default function SearchPlace() {
           setTimeout(() => searchPlaces(text, retryCount + 1), 3000);
           return;
         }
-        
+
         // Timeout sonrası kullanıcıya bilgi ver
         setPredictions([]);
-        console.warn('⚠️ Nominatim API yavaş yanıt veriyor. Lütfen daha sonra tekrar deneyin.');
+        console.warn(
+          "⚠️ Nominatim API yavaş yanıt veriyor. Lütfen daha sonra tekrar deneyin.",
+        );
         return;
       }
-      
+
       // Network hatası
-      if (error.message?.includes('Network request failed') || error.message?.includes('Failed to fetch')) {
-        console.warn('⚠️ Nominatim API network hatası - internet bağlantısını kontrol edin');
-        
+      if (
+        error.message?.includes("Network request failed") ||
+        error.message?.includes("Failed to fetch")
+      ) {
+        console.warn(
+          "⚠️ Nominatim API network hatası - internet bağlantısını kontrol edin",
+        );
+
         // Retry mekanizması (maksimum 1 deneme - rate limit'i önlemek için)
         if (retryCount < 1) {
           console.log(`🔄 Nominatim API retry denemesi ${retryCount + 1}/1...`);
@@ -110,15 +157,17 @@ export default function SearchPlace() {
           setTimeout(() => searchPlaces(text, retryCount + 1), 3000);
           return;
         }
-        
+
         // Network hatası sonrası kullanıcıya bilgi ver
         setPredictions([]);
-        console.warn('⚠️ İnternet bağlantısı hatası. Lütfen bağlantınızı kontrol edin.');
+        console.warn(
+          "⚠️ İnternet bağlantısı hatası. Lütfen bağlantınızı kontrol edin.",
+        );
         return;
       } else {
-        console.error('❌ Nominatim API hatası:', error.message || error);
+        console.error("❌ Nominatim API hatası:", error.message || error);
       }
-      
+
       setPredictions([]);
     } finally {
       setLoading(false);
@@ -128,24 +177,24 @@ export default function SearchPlace() {
   // Debounced search - kullanıcı yazmayı bitirdikten 500ms sonra arama yap
   const handleSearchChange = (text) => {
     setSearchText(text);
-    
+
     // Önceki timeout'u iptal et
     if (searchTimeout) {
       clearTimeout(searchTimeout);
     }
-    
+
     // Boş ise hemen temizle
     if (text.length < 2) {
       setPredictions([]);
       setLoading(false);
       return;
     }
-    
+
     // Rate limiting: son aramadan en az 1 saniye geçmiş olmalı
     const now = Date.now();
     const timeSinceLastSearch = now - lastSearchTime;
     const minDelay = 1000; // 1 saniye minimum bekleme
-    
+
     if (timeSinceLastSearch < minDelay) {
       // Çok yakın zamanda arama yapıldı, debounce ile bekle
       const delay = minDelay - timeSinceLastSearch + 500; // Ekstra 500ms debounce
@@ -163,7 +212,7 @@ export default function SearchPlace() {
       setSearchTimeout(timeout);
     }
   };
-  
+
   // Component unmount olduğunda timeout'u temizle
   useEffect(() => {
     return () => {
@@ -182,39 +231,49 @@ export default function SearchPlace() {
   // Fallback görsel URL oluştur (API key yoksa veya hata durumunda)
   const getFallbackImageUrl = (placeName) => {
     try {
-      const cleanName = placeName?.split(',')[0].trim().toLowerCase() || 'travel';
+      const cleanName =
+        placeName?.split(",")[0].trim().toLowerCase() || "travel";
       const placeImageMap = {
-        'istanbul': 'https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?auto=format&fit=crop&w=900&q=80',
-        'ankara': 'https://images.unsplash.com/photo-1622542796254-5b9c46ab0d2f?auto=format&fit=crop&w=900&q=80',
-        'izmir': 'https://images.unsplash.com/photo-1587017539504-67cfbddac569?auto=format&fit=crop&w=900&q=80',
-        'antalya': 'https://images.unsplash.com/photo-1573992554021-93fa646ad55e?auto=format&fit=crop&w=900&q=80',
-        'paris': 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80',
-        'london': 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=900&q=80',
-        'tokyo': 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=900&q=80',
-        'new york': 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?auto=format&fit=crop&w=900&q=80',
-        'barcelona': 'https://images.unsplash.com/photo-1539037116277-4db20889f2d4?auto=format&fit=crop&w=900&q=80',
-        'rome': 'https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?auto=format&fit=crop&w=900&q=80',
+        istanbul:
+          "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?auto=format&fit=crop&w=900&q=80",
+        ankara:
+          "https://images.unsplash.com/photo-1622542796254-5b9c46ab0d2f?auto=format&fit=crop&w=900&q=80",
+        izmir:
+          "https://images.unsplash.com/photo-1587017539504-67cfbddac569?auto=format&fit=crop&w=900&q=80",
+        antalya:
+          "https://images.unsplash.com/photo-1573992554021-93fa646ad55e?auto=format&fit=crop&w=900&q=80",
+        paris:
+          "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=900&q=80",
+        london:
+          "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=900&q=80",
+        tokyo:
+          "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=900&q=80",
+        "new york":
+          "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?auto=format&fit=crop&w=900&q=80",
+        barcelona:
+          "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?auto=format&fit=crop&w=900&q=80",
+        rome: "https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?auto=format&fit=crop&w=900&q=80",
       };
-      
+
       if (placeImageMap[cleanName]) {
         return placeImageMap[cleanName];
       }
-      
+
       const travelImages = [
-        'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=900&q=80',
-        'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=900&q=80',
-        'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=900&q=80',
-        'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=900&q=80',
-        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80',
+        "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=900&q=80",
+        "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=900&q=80",
+        "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=900&q=80",
+        "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=900&q=80",
+        "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80",
       ];
-      
+
       let hash = 0;
       for (let i = 0; i < cleanName.length; i++) {
         hash = cleanName.charCodeAt(i) + ((hash << 5) - hash);
       }
       return travelImages[Math.abs(hash) % travelImages.length];
-    } catch (error) {
-      return 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=900&q=80';
+    } catch (_error) {
+      return "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=900&q=80";
     }
   };
 
@@ -230,11 +289,11 @@ export default function SearchPlace() {
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1&extratags=1&namedetails=1&accept-language=tr`,
         {
           headers: {
-            'User-Agent': 'YolArkadasim/1.0',
-            'Accept': 'application/json',
+            "User-Agent": "YolArkadasim/1.0",
+            Accept: "application/json",
           },
           signal: controller.signal, // Timeout kontrolü
-        }
+        },
       );
 
       clearTimeout(timeoutId); // Başarılı ise timeout'u temizle
@@ -249,15 +308,21 @@ export default function SearchPlace() {
       if (place && !place.error) {
         // OpenStreetMap URL oluştur
         const osmUrl = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}&zoom=15`;
-        
-        const placeName = place.name || place.address?.name || place.display_name?.split(',')[0] || 'Bilinmeyen Yer';
-        
+
+        const placeName =
+          place.name ||
+          place.address?.name ||
+          place.display_name?.split(",")[0] ||
+          "Bilinmeyen Yer";
+
         // OpenStreetMap kullanıldığı için fallback görsel kullan
         const photoUrl = getPlaceImageUrl(placeName);
 
         const details = {
           name: placeName,
-          address: place.display_name || `${place.address?.road || ''}, ${place.address?.city || place.address?.town || place.address?.village || ''}`.trim(),
+          address:
+            place.display_name ||
+            `${place.address?.road || ""}, ${place.address?.city || place.address?.town || place.address?.village || ""}`.trim(),
           coordinates: {
             lat: parseFloat(lat),
             lon: parseFloat(lon),
@@ -270,55 +335,68 @@ export default function SearchPlace() {
         };
 
         setSelectedPlace(details);
-        console.log('📍 Detaylı yer bilgisi:', details);
-        console.log('📸 Görsel URL:', photoUrl);
+        console.log("📍 Detaylı yer bilgisi:", details);
+        console.log("📸 Görsel URL:", photoUrl);
       } else {
-        throw new Error(place?.error || 'Yer bilgisi alınamadı');
+        throw new Error(place?.error || "Yer bilgisi alınamadı");
       }
     } catch (error) {
       clearTimeout(timeoutId); // Hata durumunda timeout'u temizle
-      
+
       // Abort hatası (timeout)
-      if (error.name === 'AbortError') {
-        console.warn('⚠️ Nominatim API timeout - yer detayları 10 saniye içinde alınamadı');
-        
+      if (error.name === "AbortError") {
+        console.warn(
+          "⚠️ Nominatim API timeout - yer detayları 10 saniye içinde alınamadı",
+        );
+
         // Retry mekanizması (maksimum 2 deneme)
         if (retryCount < 2) {
           console.log(`🔄 Nominatim API retry denemesi ${retryCount + 1}/2...`);
-          setTimeout(() => fetchPlaceDetails(placeId, lat, lon, retryCount + 1), 1000);
+          setTimeout(
+            () => fetchPlaceDetails(placeId, lat, lon, retryCount + 1),
+            1000,
+          );
           return;
         }
       }
-      
+
       // Network hatası
-      if (error.message?.includes('Network request failed') || error.message?.includes('Failed to fetch')) {
-        console.warn('⚠️ Nominatim API network hatası - yer detayları alınamadı');
-        
+      if (
+        error.message?.includes("Network request failed") ||
+        error.message?.includes("Failed to fetch")
+      ) {
+        console.warn(
+          "⚠️ Nominatim API network hatası - yer detayları alınamadı",
+        );
+
         // Retry mekanizması (maksimum 2 deneme)
         if (retryCount < 2) {
           console.log(`🔄 Nominatim API retry denemesi ${retryCount + 1}/2...`);
-          setTimeout(() => fetchPlaceDetails(placeId, lat, lon, retryCount + 1), 2000);
+          setTimeout(
+            () => fetchPlaceDetails(placeId, lat, lon, retryCount + 1),
+            2000,
+          );
           return;
         }
-        
+
         // Fallback: Koordinatlardan basit bilgi oluştur
         const fallbackDetails = {
-          name: 'Seçilen Konum',
+          name: "Seçilen Konum",
           address: `${lat}, ${lon}`,
           coordinates: {
             lat: parseFloat(lat),
             lon: parseFloat(lon),
           },
           url: `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}&zoom=15`,
-          photoUrl: getPlaceImageUrl('travel'),
+          photoUrl: getPlaceImageUrl("travel"),
           rating: null,
           totalReviews: null,
           isOpenNow: null,
         };
         setSelectedPlace(fallbackDetails);
-        console.log('📍 Fallback yer bilgisi kullanılıyor:', fallbackDetails);
+        console.log("📍 Fallback yer bilgisi kullanılıyor:", fallbackDetails);
       } else {
-        console.error('❌ Nominatim API hatası:', error.message || error);
+        console.error("❌ Nominatim API hatası:", error.message || error);
       }
     }
   };
@@ -332,37 +410,36 @@ export default function SearchPlace() {
   // Seçilen yeri context'e kaydet ve tarih seçimine geç
   const handlePlaceSelection = () => {
     if (!selectedPlace) {
-      Alert.alert('Hata', 'Lütfen bir yer seçin');
+      Alert.alert("Hata", "Lütfen bir yer seçin");
       return;
     }
 
-    console.log('📍 Yer seçildi:', selectedPlace);
+    console.log("📍 Yer seçildi:", selectedPlace);
 
     // Seyahat verilerini güncelle
     const updatedTripData = {
       ...tripData,
       selectedPlace: selectedPlace,
     };
-    
-    console.log('💾 Context güncelleniyor:', updatedTripData);
-    setTripData(updatedTripData);
-    
-    // Tarih seçim sayfasına geç
-    console.log('➡️ select-date sayfasına yönlendiriliyor...');
-    router.push('/create-trip/select-date');
-  };
 
+    console.log("💾 Context güncelleniyor:", updatedTripData);
+    setTripData(updatedTripData);
+
+    // Tarih seçim sayfasına geç
+    console.log("➡️ select-date sayfasına yönlendiriliyor...");
+    router.push("/create-trip/select-date");
+  };
 
   return (
     <View
       style={{
         padding: 25,
-        paddingTop: 75,
+        paddingTop: 24,
         backgroundColor: Colors.WHITE,
-        height: '100%',
+        height: "100%",
       }}
     >
-      <View style={{ position: 'relative' }}>
+      <View style={{ position: "relative" }}>
         <TextInput
           placeholder="Yer ara..."
           value={searchText}
@@ -373,12 +450,12 @@ export default function SearchPlace() {
             borderRadius: 10,
             borderColor: Colors.GRAY,
             fontSize: 16,
-            backgroundColor: '#FFFFFF',
+            backgroundColor: "#FFFFFF",
           }}
         />
 
         {loading && (
-          <View style={{ position: 'absolute', right: 15, top: 15 }}>
+          <View style={{ position: "absolute", right: 15, top: 15 }}>
             <ActivityIndicator size="small" color={Colors.PRIMARY} />
           </View>
         )}
@@ -397,14 +474,27 @@ export default function SearchPlace() {
                   padding: 15,
                   borderBottomWidth: 1,
                   borderBottomColor: Colors.GRAY,
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: "#FFFFFF",
                 }}
               >
-                <Text style={{ fontSize: 16, color: Colors.PRIMARY, fontFamily: 'outfit-medium' }}>
+                <Text
+                  style={{
+                    fontSize: 16,
+                    color: Colors.PRIMARY,
+                    fontFamily: "outfit-medium",
+                  }}
+                >
                   {item.structured_formatting?.main_text || item.description}
                 </Text>
                 {item.structured_formatting?.secondary_text && (
-                  <Text style={{ fontSize: 13, color: Colors.GRAY, marginTop: 4, fontFamily: 'outfit' }}>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color: Colors.GRAY,
+                      marginTop: 4,
+                      fontFamily: "outfit",
+                    }}
+                  >
                     {item.structured_formatting.secondary_text}
                   </Text>
                 )}
@@ -420,30 +510,34 @@ export default function SearchPlace() {
           style={{
             marginTop: 20,
             borderRadius: 16,
-            overflow: 'hidden',
+            overflow: "hidden",
             borderWidth: 1,
             borderColor: Colors.GRAY,
           }}
         >
           <ImageBackground
-            source={{ uri: selectedPlace.photoUrl || getFallbackImageUrl(selectedPlace.name) }}
+            source={{
+              uri:
+                selectedPlace.photoUrl ||
+                getFallbackImageUrl(selectedPlace.name),
+            }}
             style={{
-              width: '100%',
+              width: "100%",
               height: 220,
-              justifyContent: 'flex-end',
+              justifyContent: "flex-end",
             }}
             imageStyle={{ opacity: 0.8 }}
           >
             <View
               style={{
                 padding: 15,
-                backgroundColor: 'rgba(0,0,0,0.5)',
+                backgroundColor: "rgba(0,0,0,0.5)",
               }}
             >
               <Text
                 style={{
                   fontSize: 20,
-                  fontFamily: 'outfit-bold',
+                  fontFamily: "outfit-bold",
                   color: Colors.WHITE,
                 }}
               >
@@ -462,15 +556,15 @@ export default function SearchPlace() {
             </View>
           </ImageBackground>
 
-          <View style={{ padding: 16, backgroundColor: '#FAFAFA', gap: 12 }}>
+          <View style={{ padding: 16, backgroundColor: "#FAFAFA", gap: 12 }}>
             <View
               style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
               }}
             >
-              <Text style={{ fontFamily: 'outfit', color: Colors.GRAY }}>
+              <Text style={{ fontFamily: "outfit", color: Colors.GRAY }}>
                 OpenStreetMap
               </Text>
             </View>
@@ -479,20 +573,24 @@ export default function SearchPlace() {
               <TouchableOpacity
                 onPress={() => Linking.openURL(selectedPlace.url)}
                 style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
+                  flexDirection: "row",
+                  alignItems: "center",
                   gap: 6,
                 }}
               >
-                <Ionicons name="navigate-circle" size={20} color={Colors.PRIMARY} />
+                <Ionicons
+                  name="navigate-circle"
+                  size={20}
+                  color={Colors.PRIMARY}
+                />
                 <Text
                   style={{
-                    fontFamily: 'outfit-medium',
+                    fontFamily: "outfit-medium",
                     color: Colors.PRIMARY,
-                    textDecorationLine: 'underline',
+                    textDecorationLine: "underline",
                   }}
                 >
-                  OpenStreetMap'te Görüntüle
+                  {"OpenStreetMap'te Görüntüle"}
                 </Text>
               </TouchableOpacity>
             )}
@@ -504,9 +602,9 @@ export default function SearchPlace() {
                 padding: 15,
                 backgroundColor: Colors.PRIMARY,
                 borderRadius: 15,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
               }}
               onPress={handlePlaceSelection}
             >
@@ -514,7 +612,7 @@ export default function SearchPlace() {
                 style={{
                   color: Colors.WHITE,
                   fontSize: 16,
-                  fontFamily: 'outfit-medium',
+                  fontFamily: "outfit-medium",
                   marginRight: 10,
                 }}
               >

@@ -21,10 +21,11 @@ let app = null;
 let auth = null;
 let db = null;
 let storage = null;
+let firebaseInitError = null;
 
 try {
   app = initializeApp(firebaseConfig);
-  
+
   // 🔑 Authentication servisini başlat (React Native için)
   auth = initializeAuth(app, {
     persistence: getReactNativePersistence(AsyncStorage),
@@ -32,48 +33,14 @@ try {
 
   // 🗃️ Firestore veritabanı (isteğe bağlı)
   db = getFirestore(app);
-  
+
   // 📦 Firebase Storage (fotoğraf yükleme için)
   storage = getStorage(app);
-  
+
   console.log("✅ Firebase initialized successfully");
 } catch (error) {
+  firebaseInitError = error;
   console.log("❌ Firebase initialization failed:", error.message);
 }
 
-// Check if auth was initialized successfully
-if (!auth) {
-  console.log("⚠️ Auth not initialized, using fallback");
-  
-  // Fallback mock auth (should not be needed)
-  auth = {
-    currentUser: null,
-    signInWithEmailAndPassword: (auth, email, password) => {
-      console.log("Demo sign in:", email);
-      return Promise.resolve({ 
-        user: { 
-          uid: 'demo-user-' + Date.now(),
-          email: email,
-          displayName: email.split('@')[0]
-        } 
-      });
-    },
-    createUserWithEmailAndPassword: (auth, email, password) => {
-      console.log("Demo sign up:", email);
-      return Promise.resolve({ 
-        user: { 
-          uid: 'demo-user-' + Date.now(),
-          email: email,
-          displayName: email.split('@')[0]
-        } 
-      });
-    },
-    signOut: () => {
-      console.log("Demo sign out");
-      return Promise.resolve();
-    },
-  };
-}
-
-export { app, auth, db, storage };
-
+export { app, auth, db, firebaseInitError, storage };
