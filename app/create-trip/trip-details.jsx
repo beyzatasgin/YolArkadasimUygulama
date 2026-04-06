@@ -62,7 +62,6 @@ export default function TripDetails() {
   const router = useRouter();
   const { tripData, setTripData } = useContext(CreateTripContext);
 
-  const [travelers, setTravelers] = useState(tripData?.travelers || 1);
   const [tripName, setTripName] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
@@ -76,22 +75,6 @@ export default function TripDetails() {
 
     router.replace("/create-trip/review-trip");
   }, [navigation, router]);
-
-  // İlgi alanları seçenekleri
-  const interestOptions = [
-    { id: "culture", label: "Kültür", icon: "library-outline" },
-    { id: "nature", label: "Doğa", icon: "leaf-outline" },
-    { id: "adventure", label: "Macera", icon: "bicycle-outline" },
-    { id: "food", label: "Yemek", icon: "restaurant-outline" },
-    { id: "shopping", label: "Alışveriş", icon: "bag-outline" },
-    { id: "nightlife", label: "Gece Hayatı", icon: "wine-outline" },
-    { id: "beach", label: "Plaj", icon: "sunny-outline" },
-    { id: "history", label: "Tarih", icon: "book-outline" },
-  ];
-
-  const [selectedInterests, setSelectedInterests] = useState(
-    tripData?.interests || [],
-  );
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -178,25 +161,6 @@ export default function TripDetails() {
     }
   }, [saved, router]);
 
-  // İlgi alanı seç/kaldır
-  const toggleInterest = (interestId) => {
-    setSelectedInterests((prev) => {
-      if (prev.includes(interestId)) {
-        return prev.filter((id) => id !== interestId);
-      } else {
-        return [...prev, interestId];
-      }
-    });
-  };
-
-  // Yolcu sayısı artır/azalt
-  const adjustTravelers = (delta) => {
-    const newValue = travelers + delta;
-    if (newValue >= 1 && newValue <= 20) {
-      setTravelers(newValue);
-    }
-  };
-
   // Tarih formatı
   const formatDate = (date) => {
     if (!date) return "Seçilmedi";
@@ -206,16 +170,6 @@ export default function TripDetails() {
       month: "long",
       year: "numeric",
     });
-  };
-
-  // Bütçe formatı
-  const formatBudget = (amount) => {
-    if (!amount) return "Seçilmedi";
-    return new Intl.NumberFormat("tr-TR", {
-      style: "currency",
-      currency: "TRY",
-      minimumFractionDigits: 0,
-    }).format(amount);
   };
 
   // Seyahati kaydet
@@ -279,9 +233,6 @@ export default function TripDetails() {
         startDate: startDateTimestamp,
         endDate: endDateTimestamp,
         duration: tripData.duration,
-        travelers,
-        budget: tripData.budget,
-        interests: selectedInterests,
         notes: notes.trim(),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -303,9 +254,6 @@ export default function TripDetails() {
         startDate: null,
         endDate: null,
         duration: null,
-        travelers: 1,
-        budget: null,
-        interests: [],
         accommodation: null,
         transportation: null,
       });
@@ -393,18 +341,6 @@ export default function TripDetails() {
               </View>
             </View>
           )}
-
-          {tripData?.budget && (
-            <View style={styles.summaryRow}>
-              <Ionicons name="wallet" size={20} color={Colors.PRIMARY} />
-              <View style={styles.summaryContent}>
-                <Text style={styles.summaryLabel}>Bütçe</Text>
-                <Text style={styles.summaryValue}>
-                  {formatBudget(tripData.budget)}
-                </Text>
-              </View>
-            </View>
-          )}
         </View>
 
         {/* Seyahat Adı */}
@@ -417,82 +353,6 @@ export default function TripDetails() {
             value={tripName}
             onChangeText={setTripName}
           />
-        </View>
-
-        {/* Yolcu Sayısı */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Yolcu Sayısı</Text>
-          <View style={styles.travelersContainer}>
-            <TouchableOpacity
-              style={styles.travelerButton}
-              onPress={() => adjustTravelers(-1)}
-              disabled={travelers <= 1}
-            >
-              <Ionicons
-                name="remove-circle-outline"
-                size={28}
-                color={travelers <= 1 ? Colors.GRAY : Colors.PRIMARY}
-              />
-            </TouchableOpacity>
-            <Text style={styles.travelerCount}>{travelers}</Text>
-            <TouchableOpacity
-              style={styles.travelerButton}
-              onPress={() => adjustTravelers(1)}
-              disabled={travelers >= 20}
-            >
-              <Ionicons
-                name="add-circle-outline"
-                size={28}
-                color={travelers >= 20 ? Colors.GRAY : Colors.PRIMARY}
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* İlgi Alanları */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>İlgi Alanları</Text>
-          <Text style={styles.sectionSubtitle}>
-            Seyahatinizde ne yapmak istersiniz? (Birden fazla seçebilirsiniz)
-          </Text>
-          <View style={styles.interestsGrid}>
-            {interestOptions.map((interest) => {
-              const isSelected = selectedInterests.includes(interest.id);
-              return (
-                <TouchableOpacity
-                  key={interest.id}
-                  style={[
-                    styles.interestCard,
-                    isSelected && styles.interestCardSelected,
-                  ]}
-                  onPress={() => toggleInterest(interest.id)}
-                >
-                  <Ionicons
-                    name={interest.icon}
-                    size={24}
-                    color={isSelected ? Colors.WHITE : Colors.PRIMARY}
-                  />
-                  <Text
-                    style={[
-                      styles.interestLabel,
-                      isSelected && styles.interestLabelSelected,
-                    ]}
-                  >
-                    {interest.label}
-                  </Text>
-                  {isSelected && (
-                    <View style={styles.selectedCheck}>
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={20}
-                        color={Colors.WHITE}
-                      />
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </View>
         </View>
 
         {/* Notlar */}
@@ -596,12 +456,6 @@ const styles = StyleSheet.create({
     color: Colors.PRIMARY,
     marginBottom: 10,
   },
-  sectionSubtitle: {
-    fontSize: 14,
-    fontFamily: "outfit",
-    color: Colors.GRAY,
-    marginBottom: 15,
-  },
   summaryCard: {
     backgroundColor: "#F8F9FA",
     padding: 20,
@@ -647,59 +501,6 @@ const styles = StyleSheet.create({
   notesInput: {
     height: 100,
     paddingTop: 15,
-  },
-  travelersContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 20,
-    padding: 20,
-    backgroundColor: "#F8F9FA",
-    borderRadius: 15,
-  },
-  travelerButton: {
-    padding: 5,
-  },
-  travelerCount: {
-    fontSize: 32,
-    fontFamily: "outfit-bold",
-    color: Colors.PRIMARY,
-    minWidth: 50,
-    textAlign: "center",
-  },
-  interestsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  interestCard: {
-    width: "47%",
-    padding: 15,
-    borderWidth: 2,
-    borderColor: Colors.GRAY,
-    borderRadius: 12,
-    backgroundColor: Colors.WHITE,
-    alignItems: "center",
-    position: "relative",
-    minHeight: 100,
-  },
-  interestCardSelected: {
-    backgroundColor: Colors.PRIMARY,
-    borderColor: Colors.PRIMARY,
-  },
-  interestLabel: {
-    fontSize: 14,
-    fontFamily: "outfit-medium",
-    color: Colors.PRIMARY,
-    marginTop: 8,
-  },
-  interestLabelSelected: {
-    color: Colors.WHITE,
-  },
-  selectedCheck: {
-    position: "absolute",
-    top: 8,
-    right: 8,
   },
   saveButton: {
     flexDirection: "row",

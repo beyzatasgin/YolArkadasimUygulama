@@ -141,8 +141,8 @@ export default function SelectDate() {
 
     setTripData(updatedTripData);
 
-    // Budget seçim sayfasına geç
-    router.push("/create-trip/select-budget");
+    // İnceleme sayfasına geç
+    router.push("/create-trip/review-trip");
   };
 
   return (

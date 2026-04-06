@@ -56,6 +56,13 @@ export default function GenerateAITrip() {
     }
   }, []);
 
+  useEffect(() => {
+    if (tripData?.aiPlan) {
+      setAiPlan(tripData.aiPlan);
+      setError(null);
+    }
+  }, [tripData?.aiPlan]);
+
   useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: true,
@@ -160,13 +167,6 @@ export default function GenerateAITrip() {
       const startDate = formatDate(tripData.startDate);
       const endDate = formatDate(tripData.endDate);
       const duration = tripData.duration || 1;
-      const budget = tripData.budget
-        ? new Intl.NumberFormat("tr-TR", {
-            style: "currency",
-            currency: "TRY",
-            minimumFractionDigits: 0,
-          }).format(tripData.budget)
-        : "Belirtilmemiş";
       const travelers = tripData.travelers || 1;
       const interests =
         tripData.interests && tripData.interests.length > 0
@@ -179,7 +179,6 @@ export default function GenerateAITrip() {
 Yer: ${placeName}
 Tarih: ${startDate} - ${endDate}
 Süre: ${duration} gün
-Bütçe: ${budget}
 Yolcu Sayısı: ${travelers} kişi
 İlgi Alanları: ${interests}
 
@@ -202,7 +201,7 @@ Lütfen aşağıdaki JSON formatında bir seyahat planı oluştur:
     "attractions": ["Görülecek yer 1", "Görülecek yer 2", "Görülecek yer 3"],
     "tips": ["İpucu 1", "İpucu 2", "İpucu 3", "İpucu 4"]
   },
-  "estimatedCost": ${tripData.budget ? Math.round(tripData.budget * 0.8) : null}
+  "estimatedCost": null
 }
 
 Sadece JSON formatında cevap ver, başka açıklama yapma. Her gün için 4-5 aktivite öner. Öneriler ${placeName} için gerçekçi ve uygulanabilir olsun.`;
@@ -313,47 +312,9 @@ Sadece JSON formatında cevap ver, başka açıklama yapma. Her gün için 4-5 a
           <Ionicons name="sparkles" size={48} color={Colors.PRIMARY} />
           <Text style={styles.title}>AI ile Seyahat Planı Oluştur</Text>
           <Text style={styles.subtitle}>
-            Yapay zeka, seçtiğiniz yer, tarih ve bütçeye göre size özel bir
-            seyahat planı hazırlayacak
+            Yapay zeka, seçtiğiniz yer ve tarihe göre size özel bir seyahat
+            planı hazırlayacak
           </Text>
-        </View>
-
-        {/* Seyahat Özeti */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Seyahat Bilgileri</Text>
-          <View style={styles.summaryRow}>
-            <Ionicons name="location" size={20} color={Colors.PRIMARY} />
-            <Text style={styles.summaryText}>
-              {tripData?.selectedPlace?.name || "Yer seçilmedi"}
-            </Text>
-          </View>
-          {tripData?.startDate && tripData?.endDate && (
-            <View style={styles.summaryRow}>
-              <Ionicons name="calendar" size={20} color={Colors.PRIMARY} />
-              <Text style={styles.summaryText}>
-                {formatDate(tripData.startDate)} -{" "}
-                {formatDate(tripData.endDate)}
-              </Text>
-            </View>
-          )}
-          {tripData?.duration && (
-            <View style={styles.summaryRow}>
-              <Ionicons name="time" size={20} color={Colors.PRIMARY} />
-              <Text style={styles.summaryText}>{tripData.duration} gün</Text>
-            </View>
-          )}
-          {tripData?.budget && (
-            <View style={styles.summaryRow}>
-              <Ionicons name="wallet" size={20} color={Colors.PRIMARY} />
-              <Text style={styles.summaryText}>
-                {new Intl.NumberFormat("tr-TR", {
-                  style: "currency",
-                  currency: "TRY",
-                  minimumFractionDigits: 0,
-                }).format(tripData.budget)}
-              </Text>
-            </View>
-          )}
         </View>
 
         {/* API Key Warning */}
@@ -618,30 +579,6 @@ const styles = StyleSheet.create({
     color: Colors.GRAY,
     textAlign: "center",
     lineHeight: 22,
-  },
-  summaryCard: {
-    backgroundColor: "#F8F9FA",
-    padding: 20,
-    borderRadius: 15,
-    marginBottom: 30,
-  },
-  summaryTitle: {
-    fontSize: 18,
-    fontFamily: "outfit-bold",
-    color: Colors.PRIMARY,
-    marginBottom: 15,
-  },
-  summaryRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 10,
-  },
-  summaryText: {
-    fontSize: 14,
-    fontFamily: "outfit",
-    color: Colors.GRAY,
-    flex: 1,
   },
   generateButton: {
     flexDirection: "row",

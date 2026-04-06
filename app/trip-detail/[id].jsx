@@ -62,7 +62,6 @@ export default function TripDetailScreen() {
       startDate: trip.startDate,
       endDate: trip.endDate,
       duration: trip.duration,
-      budget: trip.budget,
       travelers: trip.travelers,
       interests: trip.interests,
       notes: trip.notes,
@@ -260,15 +259,6 @@ export default function TripDetailScreen() {
     });
   };
 
-  const formatBudget = (amount) => {
-    if (!amount) return "Belirtilmemiş";
-    return new Intl.NumberFormat("tr-TR", {
-      style: "currency",
-      currency: "TRY",
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
-
   const getInterestLabel = (interestId) => {
     const interestLabels = {
       culture: "Kültür",
@@ -417,7 +407,7 @@ export default function TripDetailScreen() {
           )}
         </View>
 
-        {/* Travelers & Budget Section */}
+        {/* Travelers Section */}
         <View style={[styles.card, { marginHorizontal: 25 }]}>
           <View style={styles.cardHeader}>
             <Ionicons name="people" size={24} color={Colors.PRIMARY} />
@@ -427,12 +417,6 @@ export default function TripDetailScreen() {
             <View style={styles.infoRow}>
               <Ionicons name="people-outline" size={20} color={Colors.GRAY} />
               <Text style={styles.infoText}>{trip.travelers} kişi</Text>
-            </View>
-          )}
-          {trip.budget && (
-            <View style={styles.infoRow}>
-              <Ionicons name="wallet-outline" size={20} color={Colors.GRAY} />
-              <Text style={styles.infoText}>{formatBudget(trip.budget)}</Text>
             </View>
           )}
         </View>

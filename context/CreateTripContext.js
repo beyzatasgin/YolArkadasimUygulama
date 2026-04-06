@@ -9,7 +9,6 @@ export const defaultTripData = {
   endDate: null,
   duration: null,
   travelers: 1,
-  budget: null,
   interests: [],
   accommodation: null,
   transportation: null,
