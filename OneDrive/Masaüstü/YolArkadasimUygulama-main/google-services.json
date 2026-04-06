@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "486556902431",
+    "project_id": "travelapp-8096d",
+    "storage_bucket": "travelapp-8096d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:486556902431:android:c4ab4d066486b745ba612a",
+        "android_client_info": {
+          "package_name": "com.yolarkadasim"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "486556902431-o3a9e2fgcg8mg6gi85o0ehkuklurkkf4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC8EaolYdupstZg-x0S68WWI2vnB2Ugqnc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "486556902431-o3a9e2fgcg8mg6gi85o0ehkuklurkkf4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
