@@ -486,7 +486,7 @@ Sadece JSON formatında cevap ver, başka açıklama yapma. Her gün için 4-5 a
                 <Text style={styles.recommendationTitle}>Restoranlar</Text>
                 {aiPlan.recommendations.restaurants.map((rec, index) => (
                   <Text key={index} style={styles.recommendationText}>
-                    • {rec}
+                    • {typeof rec === "string" ? rec : rec?.name || "Restoran"}
                   </Text>
                 ))}
               </View>
@@ -496,7 +496,7 @@ Sadece JSON formatında cevap ver, başka açıklama yapma. Her gün için 4-5 a
                 <Text style={styles.recommendationTitle}>Görülecek Yerler</Text>
                 {aiPlan.recommendations.attractions.map((rec, index) => (
                   <Text key={index} style={styles.recommendationText}>
-                    • {rec}
+                    • {typeof rec === "string" ? rec : rec?.name || "Mekan"}
                   </Text>
                 ))}
               </View>

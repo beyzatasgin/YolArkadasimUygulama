@@ -1,17 +1,14 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Google from "expo-auth-session/providers/google";
 import Constants from "expo-constants";
 import { useNavigation, useRouter } from "expo-router";
 import {
   GoogleAuthProvider,
-  sendPasswordResetEmail,
   signInWithCredential,
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import { useEffect, useState } from "react";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -25,16 +22,13 @@ import {
 import { auth, firebaseInitError } from "./../../../configs/FirebaseConfig";
 import { getFirebaseAuthInitErrorMessage } from "./../../../configs/FirebaseMessages";
 
-const REMEMBER_ME_KEY = "remember_me";
-const REMEMBERED_EMAIL_KEY = "remembered_email";
-
 export default function SignIn() {
   const navigation = useNavigation();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(true);
 
   const appExtra = Constants.expoConfig?.extra || {};
@@ -68,88 +62,19 @@ export default function SignIn() {
         ? Boolean(effectiveIosClientId)
         : Boolean(googleWebClientId);
 
-  const handleBack = () => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-      return;
-    }
-
-    router.replace("/");
-  };
-
   useEffect(() => {
     navigation.setOptions({
       headerShown: false,
     });
   }, [navigation]);
 
-  useEffect(() => {
-    const loadRememberedData = async () => {
-      try {
-        const storedRememberMe = await AsyncStorage.getItem(REMEMBER_ME_KEY);
-        const shouldRemember = storedRememberMe === "true";
-        setRememberMe(shouldRemember);
-
-        if (shouldRemember) {
-          const storedEmail = await AsyncStorage.getItem(REMEMBERED_EMAIL_KEY);
-          if (storedEmail) {
-            setEmail(storedEmail);
-          }
-        }
-      } catch (error) {
-        console.warn("Remember me bilgileri okunamadı:", error);
-      }
-    };
-
-    loadRememberedData();
-  }, []);
-
-  const handleForgotPassword = async () => {
-    if (!auth) {
-      const initMessage = getFirebaseAuthInitErrorMessage(firebaseInitError);
-      ToastAndroid.show(initMessage, ToastAndroid.LONG);
-      return;
-    }
-
-    const trimmedEmail = email?.trim();
-
-    if (!trimmedEmail) {
-      Alert.alert(
-        "E-posta Gerekli",
-        "Şifre sıfırlama için önce e-posta adresinizi girin.",
-      );
-      return;
-    }
-
-    try {
-      await sendPasswordResetEmail(auth, trimmedEmail);
-      ToastAndroid.show(
-        "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.",
-        ToastAndroid.LONG,
-      );
-    } catch (error) {
-      const code = error?.code;
-      if (code === "auth/user-not-found") {
-        ToastAndroid.show(
-          "Bu e-posta ile kayıtlı kullanıcı bulunamadı.",
-          ToastAndroid.LONG,
-        );
-        return;
-      }
-
-      if (code === "auth/invalid-email") {
-        ToastAndroid.show(
-          "Geçerli bir e-posta adresi girin.",
-          ToastAndroid.LONG,
-        );
-        return;
-      }
-
-      ToastAndroid.show(
-        "Şifre sıfırlama işlemi başarısız oldu.",
-        ToastAndroid.LONG,
-      );
-    }
+  const handleForgotPassword = () => {
+    router.push({
+      pathname: "/auth/forgot-password",
+      params: {
+        email: email?.trim() || "",
+      },
+    });
   };
 
   const onSignIn = () => {
@@ -159,7 +84,7 @@ export default function SignIn() {
       return;
     }
 
-    const trimmedEmail = email?.trim();
+    const trimmedEmail = email?.trim().toLowerCase();
     const trimmedPassword = password?.trim();
 
     if (!trimmedEmail || !trimmedPassword) {
@@ -168,19 +93,7 @@ export default function SignIn() {
     }
 
     signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword)
-      .then(async (userCredential) => {
-        if (rememberMe) {
-          await AsyncStorage.multiSet([
-            [REMEMBER_ME_KEY, "true"],
-            [REMEMBERED_EMAIL_KEY, trimmedEmail],
-          ]);
-        } else {
-          await AsyncStorage.multiRemove([
-            REMEMBER_ME_KEY,
-            REMEMBERED_EMAIL_KEY,
-          ]);
-        }
-
+      .then((userCredential) => {
         // Signed in
         const user = userCredential.user;
         router.replace("/mytrip");
@@ -209,10 +122,6 @@ export default function SignIn() {
       <View style={styles.backgroundGlowBottom} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-          <Ionicons name="arrow-back" size={22} color="#E6E9F2" />
-        </TouchableOpacity>
-
         <View style={styles.card}>
           <Text style={styles.title}>Tekrar hoş geldin</Text>
           <Text style={styles.subtitle}>
@@ -258,34 +167,33 @@ export default function SignIn() {
               placeholderTextColor="#8B93A8"
               keyboardType="email-address"
               autoCapitalize="none"
+              autoCorrect={false}
             />
           </View>
 
           <View style={styles.inputWrapper}>
             <Ionicons name="lock-closed-outline" size={18} color="#8B93A8" />
             <TextInput
-              secureTextEntry
+              secureTextEntry={!showPassword}
               style={styles.input}
               value={password}
               onChangeText={setPassword}
               placeholder="Şifre"
               placeholderTextColor="#8B93A8"
             />
+            <TouchableOpacity
+              onPress={() => setShowPassword((prev) => !prev)}
+              style={styles.passwordToggle}
+            >
+              <Ionicons
+                name={showPassword ? "eye-off-outline" : "eye-outline"}
+                size={18}
+                color="#A6B0C7"
+              />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.inlineRow}>
-            <TouchableOpacity
-              onPress={() => setRememberMe((prev) => !prev)}
-              style={styles.rememberRow}
-            >
-              <Ionicons
-                name={rememberMe ? "checkbox" : "square-outline"}
-                size={18}
-                color={rememberMe ? "#F43F5E" : "#8B93A8"}
-              />
-              <Text style={styles.rememberText}>Beni hatırla</Text>
-            </TouchableOpacity>
-
             <TouchableOpacity onPress={handleForgotPassword}>
               <Text style={styles.forgotText}>Şifremi unuttum</Text>
             </TouchableOpacity>
@@ -350,15 +258,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 16,
     paddingVertical: 28,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.08)",
-    marginBottom: 14,
   },
   card: {
     backgroundColor: "rgba(18,23,40,0.82)",
@@ -438,22 +337,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-  },
-  rememberRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  rememberText: {
-    marginLeft: 6,
-    color: "#A6B0C7",
-    fontFamily: "outfit",
-    fontSize: 12,
+    justifyContent: "flex-end",
   },
   forgotText: {
     color: "#E5E7EB",
     fontFamily: "outfit-medium",
     fontSize: 12,
+  },
+  passwordToggle: {
+    paddingHorizontal: 4,
+    paddingVertical: 6,
   },
   termsRow: {
     marginTop: 8,

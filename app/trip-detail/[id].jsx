@@ -147,7 +147,7 @@ export default function TripDetailScreen() {
     }
   }, []);
 
-  // OpenStreetMap kullanıldığı için görsel çekme API'si yok
+  // Harici görsel API'si kullanılmadığında fallback görselleri kullan
   // Sadece fallback görselleri kullanıyoruz
   const getPlaceImageUrl = useCallback(
     (placeName) => {
@@ -216,7 +216,7 @@ export default function TripDetailScreen() {
 
       setTrip(tripData);
 
-      // Yer bilgisi varsa görsel URL'ini oluştur (OpenStreetMap kullanıldığı için fallback görseller)
+      // Yer bilgisi varsa görsel URL'ini oluştur
       if (tripData.selectedPlace?.name) {
         const imageUrl = getPlaceImageUrl(tripData.selectedPlace.name);
         setPlaceImageUrl(imageUrl);
@@ -278,7 +278,7 @@ export default function TripDetailScreen() {
       const { lat, lon } = trip.selectedPlace.coordinates;
       const url =
         trip.selectedPlace.url ||
-        `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}&zoom=15`;
+        `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
       Linking.openURL(url).catch((err) => {
         console.error("Maps açma hatası:", err);
         Alert.alert("Hata", "Harita açılamadı");

@@ -21,6 +21,91 @@ export default function ReviewTrip() {
   const { tripData, setTripData } = useContext(CreateTripContext);
   const [generatingAI, setGeneratingAI] = useState(false);
 
+  const getGooglePlacesApiKey = () =>
+    process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY ||
+    process.env.EXPO_PUBLIC_GOOGLE_MAP_KEY ||
+    Constants.expoConfig?.extra?.googlePlacesApiKey ||
+    Constants.expoConfig?.extra?.googleMapKey ||
+    Constants.manifest?.extra?.googlePlacesApiKey;
+
+  const buildGooglePhotoUrl = (photoName, apiKey) => {
+    if (!photoName || !apiKey) return null;
+    return `https://places.googleapis.com/v1/${photoName}/media?maxHeightPx=1200&key=${apiKey}`;
+  };
+
+  const fetchGooglePlacesByQuery = async (
+    apiKey,
+    textQuery,
+    coordinates,
+    maxResultCount = 6,
+  ) => {
+    const response = await fetch(
+      `https://places.googleapis.com/v1/places:searchText?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-FieldMask":
+            "places.displayName,places.formattedAddress,places.googleMapsUri,places.rating,places.userRatingCount,places.photos.name",
+        },
+        body: JSON.stringify({
+          textQuery,
+          languageCode: "tr",
+          maxResultCount,
+          ...(coordinates?.lat && coordinates?.lon
+            ? {
+                locationBias: {
+                  circle: {
+                    center: {
+                      latitude: Number(coordinates.lat),
+                      longitude: Number(coordinates.lon),
+                    },
+                    radius: 25000,
+                  },
+                },
+              }
+            : {}),
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({}));
+      const errorMessage =
+        errorBody?.error?.message ||
+        `Google Places API hatası: ${response.status} ${response.statusText}`;
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    if (!Array.isArray(data?.places)) return [];
+
+    return data.places
+      .map((place) => {
+        const name = place.displayName?.text;
+        if (!name) return null;
+        return {
+          name,
+          address: place.formattedAddress || "Adres bilgisi yok",
+          rating: place.rating || null,
+          totalReviews: place.userRatingCount || null,
+          url: place.googleMapsUri || null,
+          photoUrl: buildGooglePhotoUrl(place.photos?.[0]?.name, apiKey),
+        };
+      })
+      .filter(Boolean);
+  };
+
+  const formatCandidatesForPrompt = (items) => {
+    if (!items || items.length === 0) return "- Veri bulunamadı";
+    return items
+      .map((item) => {
+        const ratingText = item.rating ? ` | Puan: ${item.rating}` : "";
+        return `- ${item.name}${ratingText} | ${item.address}`;
+      })
+      .join("\n");
+  };
+
   const handleGoBack = useCallback(() => {
     if (navigation.canGoBack()) {
       navigation.goBack();
@@ -146,12 +231,53 @@ export default function ReviewTrip() {
       const startDate = formatDate(tripData.startDate);
       const endDate = formatDate(tripData.endDate);
       const duration = tripData.duration || 1;
+      const googlePlacesApiKey = getGooglePlacesApiKey();
+
+      let googleRecommendations = null;
+      if (googlePlacesApiKey && !googlePlacesApiKey.includes("YOUR_")) {
+        try {
+          const coordinates = tripData?.selectedPlace?.coordinates;
+          const [accommodations, restaurants, attractions] = await Promise.all([
+            fetchGooglePlacesByQuery(
+              googlePlacesApiKey,
+              `${placeName} otel konaklama`,
+              coordinates,
+            ),
+            fetchGooglePlacesByQuery(
+              googlePlacesApiKey,
+              `${placeName} en iyi restoran`,
+              coordinates,
+            ),
+            fetchGooglePlacesByQuery(
+              googlePlacesApiKey,
+              `${placeName} gezilecek yer`,
+              coordinates,
+            ),
+          ]);
+
+          googleRecommendations = {
+            accommodations,
+            restaurants,
+            attractions,
+          };
+        } catch (googleError) {
+          console.warn(
+            "Google Places önerileri alınamadı, AI plan varsayılan akışla devam edecek:",
+            googleError?.message || googleError,
+          );
+        }
+      }
+
+      const googleContext = googleRecommendations
+        ? `\nGoogle Places verileri (öncelikli kullan):\n\nKonaklama adayları:\n${formatCandidatesForPrompt(googleRecommendations.accommodations)}\n\nRestoran adayları:\n${formatCandidatesForPrompt(googleRecommendations.restaurants)}\n\nGörülecek yer adayları:\n${formatCandidatesForPrompt(googleRecommendations.attractions)}`
+        : "";
 
       const prompt = `Sen bir seyahat planlama uzmanısın. Aşağıdaki bilgilere göre detaylı bir seyahat planı oluştur:
 
 Yer: ${placeName}
 Tarih: ${startDate} - ${endDate}
 Süre: ${duration} gün
+${googleContext}
 
 Lütfen aşağıdaki JSON formatında bir seyahat planı oluştur:
 {
@@ -165,16 +291,19 @@ Lütfen aşağıdaki JSON formatında bir seyahat planı oluştur:
   ],
   "recommendations": {
     "accommodations": [
-      {"name": "Otel adı 1", "rating": 4.5, "price": "₺500-₺1000/gece"}
+      {"name": "Otel adı 1", "rating": 4.5, "address": "Adres bilgisi", "url": "Google Maps linki", "photoUrl": "Fotoğraf URL"}
     ],
-    "restaurants": ["Restoran önerisi 1", "Restoran önerisi 2"],
-    "attractions": ["Görülecek yer 1", "Görülecek yer 2"],
+    "restaurants": [{"name": "Restoran önerisi 1", "rating": 4.4, "address": "Adres bilgisi", "url": "Google Maps linki", "photoUrl": "Fotoğraf URL"}],
+    "attractions": [{"name": "Görülecek yer 1", "rating": 4.6, "address": "Adres bilgisi", "url": "Google Maps linki", "photoUrl": "Fotoğraf URL"}],
     "tips": ["İpucu 1", "İpucu 2", "İpucu 3"]
   },
   "estimatedCost": null
 }
 
-Sadece JSON formatında cevap ver, başka açıklama yapma.`;
+Kurallar:
+- Sadece JSON formatında cevap ver, başka açıklama yapma.
+- Eğer Google Places verisi verildiyse, recommendations alanlarında bu listedeki gerçek mekan adlarını kullan.
+- activities içinde de mümkün olduğunca gerçek mekan isimleri kullan.`;
 
       const response = await fetch(
         "https://api.openai.com/v1/chat/completions",
@@ -207,6 +336,21 @@ Sadece JSON formatında cevap ver, başka açıklama yapma.`;
 
       const data = await response.json();
       const aiPlan = parseAIResponse(data);
+
+      if (googleRecommendations) {
+        aiPlan.recommendations = {
+          ...(aiPlan.recommendations || {}),
+          accommodations: googleRecommendations.accommodations,
+          restaurants: googleRecommendations.restaurants,
+          attractions: googleRecommendations.attractions,
+          tips: Array.isArray(aiPlan.recommendations?.tips)
+            ? aiPlan.recommendations.tips
+            : [
+                "Mekanların çalışma saatlerini Gitmeden önce kontrol edin.",
+                "Rezervasyon gerektiren mekanlar için erken plan yapın.",
+              ],
+        };
+      }
 
       setTripData({
         ...tripData,

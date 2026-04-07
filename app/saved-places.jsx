@@ -127,7 +127,7 @@ export default function SavedPlaces() {
       const { lat, lon } = place.coordinates;
       const url =
         place.url ||
-        `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}&zoom=15`;
+        `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
       Linking.openURL(url).catch((err) => {
         console.error("Maps açma hatası:", err);
         Alert.alert("Hata", "Harita açılamadı");

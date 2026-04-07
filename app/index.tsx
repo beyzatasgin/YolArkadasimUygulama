@@ -1,15 +1,5 @@
-import React from "react";
-import { View } from "react-native";
-import Login from "./../components/Login";
+import { Redirect } from "expo-router";
 
 export default function Index() {
-  return (
-    <View
-      style={{
-        flex: 1,
-      }}
-    >
-      <Login />
-    </View>
-  );
+  return <Redirect href="/auth/sign-in" />;
 }

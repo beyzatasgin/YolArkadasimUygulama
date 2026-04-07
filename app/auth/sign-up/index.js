@@ -19,6 +19,7 @@ export default function SignUp() {
   const [email, setEmail] = useState();
   const [password, setPassword] = useState();
   const [fullName, setFullName] = useState();
+  const [showPassword, setShowPassword] = useState(false);
   useEffect(() => {
     navigation.setOptions({
       headerShown: false,
@@ -32,7 +33,7 @@ export default function SignUp() {
       return;
     }
 
-    const trimmedEmail = email?.trim();
+    const trimmedEmail = email?.trim().toLowerCase();
     const trimmedPassword = password?.trim();
     const trimmedFullName = fullName?.trim();
 
@@ -130,6 +131,9 @@ export default function SignUp() {
           style={styles.input}
           onChangeText={(value) => setEmail(value)}
           placeholder="E-posta adresinizi girin"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
         />
       </View>
       {/* Password*/}
@@ -146,12 +150,24 @@ export default function SignUp() {
           {" "}
           Şifre{" "}
         </Text>
-        <TextInput
-          secureTextEntry={true}
-          style={styles.input}
-          onChangeText={(value) => setPassword(value)}
-          placeholder="Şifrenizi girin"
-        />
+        <View style={styles.passwordWrapper}>
+          <TextInput
+            secureTextEntry={!showPassword}
+            style={[styles.input, styles.passwordInput]}
+            onChangeText={(value) => setPassword(value)}
+            placeholder="Şifrenizi girin"
+          />
+          <TouchableOpacity
+            onPress={() => setShowPassword((prev) => !prev)}
+            style={styles.passwordToggle}
+          >
+            <Ionicons
+              name={showPassword ? "eye-off-outline" : "eye-outline"}
+              size={20}
+              color={Colors.GRAY}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/*Create Account Button*/}
@@ -204,5 +220,17 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     borderColor: Colors.GRAY,
     fontFamily: "outfit",
+  },
+  passwordWrapper: {
+    position: "relative",
+    justifyContent: "center",
+  },
+  passwordInput: {
+    paddingRight: 46,
+  },
+  passwordToggle: {
+    position: "absolute",
+    right: 14,
+    top: 13,
   },
 });

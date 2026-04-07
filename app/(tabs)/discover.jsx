@@ -1,4 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import Constants from "expo-constants";
 import { useNavigation } from "expo-router";
 import {
   collection,
@@ -53,11 +54,14 @@ const defaultPlaces = [
 ];
 
 const buildMapsUrl = (place) => {
+  if (place.url) {
+    return place.url;
+  }
   if (place.coordinates) {
     const { lat, lon } = place.coordinates;
-    return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}&zoom=15`;
+    return `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
   }
-  return `https://www.openstreetmap.org/search?query=${encodeURIComponent(place.title)}`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.title)}`;
 };
 
 export default function Discover() {
@@ -66,6 +70,14 @@ export default function Discover() {
   const [places, setPlaces] = useState(defaultPlaces);
   const [loading, setLoading] = useState(false);
   const [savedPlaceIds, setSavedPlaceIds] = useState(new Set());
+  const [placesConfigAlertShown, setPlacesConfigAlertShown] = useState(false);
+
+  const getGooglePlacesApiKey = () =>
+    process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY ||
+    process.env.EXPO_PUBLIC_GOOGLE_MAP_KEY ||
+    Constants.expoConfig?.extra?.googlePlacesApiKey ||
+    Constants.expoConfig?.extra?.googleMapKey ||
+    Constants.manifest?.extra?.googlePlacesApiKey;
 
   useEffect(() => {
     navigation.setOptions({ headerShown: false });
@@ -112,25 +124,32 @@ export default function Discover() {
   const fetchPlaces = async (text, retryCount = 0) => {
     setLoading(true);
 
+    const apiKey = getGooglePlacesApiKey();
+    if (!apiKey || apiKey.includes("YOUR_")) {
+      console.warn("⚠️ Google Places API key bulunamadı.");
+      showDefaultIfEmpty();
+      return;
+    }
+
     // Timeout kontrolü için AbortController - 15 saniye (daha uzun timeout)
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 saniye timeout
 
     try {
-      // OpenStreetMap Nominatim API kullanarak yer arama
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-          text,
-        )}&format=json&limit=10&addressdetails=1&extratags=1&namedetails=1`,
+        `https://places.googleapis.com/v1/places:searchText?key=${apiKey}`,
         {
+          method: "POST",
           headers: {
-            "User-Agent":
-              "YolArkadasim-TravelApp/1.0 (https://yolarkadasim.app)", // Nominatim için gerekli - daha detaylı
-            Accept: "application/json",
-            "Accept-Language": "tr,en",
-            Referer: "https://yolarkadasim.app",
+            "Content-Type": "application/json",
+            "X-Goog-FieldMask":
+              "places.id,places.displayName,places.formattedAddress,places.location,places.googleMapsUri",
           },
-          signal: controller.signal, // Timeout kontrolü
+          body: JSON.stringify({
+            textQuery: text,
+            languageCode: "tr",
+          }),
+          signal: controller.signal,
         },
       );
 
@@ -138,12 +157,15 @@ export default function Discover() {
 
       // Response kontrolü
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorBody = await response.json().catch(() => ({}));
+        const errorMessage =
+          errorBody?.error?.message || `HTTP error! status: ${response.status}`;
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
-      if (Array.isArray(data) && data.length > 0) {
-        const mapped = data.map((place, index) => {
+      if (Array.isArray(data?.places) && data.places.length > 0) {
+        const mapped = data.places.map((place, index) => {
           // Place adına göre görsel oluştur
           const getPlaceImageUrl = (placeName) => {
             if (!placeName)
@@ -191,26 +213,23 @@ export default function Discover() {
             return travelImages[Math.abs(hash) % travelImages.length];
           };
 
-          const placeName =
-            place.display_name?.split(",")[0] || place.name || "travel";
+          const placeName = place.displayName?.text || "travel";
           const imageUrl = getPlaceImageUrl(placeName);
+          const lat = place.location?.latitude;
+          const lng = place.location?.longitude;
 
           return {
-            id: place.place_id || place.osm_id || `place-${index}`,
-            placeId: place.place_id || place.osm_id,
-            title:
-              place.display_name?.split(",")[0] ||
-              place.name ||
-              "Bilinmeyen Yer",
+            id: place.id || `place-${index}`,
+            placeId: place.id,
+            title: place.displayName?.text || "Bilinmeyen Yer",
             description:
-              place.display_name ||
-              place.address?.road ||
-              "Haritada açmak için dokunun",
+              place.formattedAddress || "Haritada açmak için dokunun",
             coordinates: {
-              lat: parseFloat(place.lat),
-              lon: parseFloat(place.lon),
+              lat,
+              lon: lng,
             },
             image: imageUrl,
+            url: place.googleMapsUri,
           };
         });
         setPlaces(mapped);
@@ -223,19 +242,21 @@ export default function Discover() {
       // Abort hatası (timeout)
       if (error.name === "AbortError") {
         console.warn(
-          "⚠️ Nominatim API timeout - istek 15 saniye içinde tamamlanamadı",
+          "⚠️ Google Places API timeout - istek zamanında tamamlanamadı",
         );
 
         // Retry mekanizması (maksimum 1 deneme - rate limit'i önlemek için)
         if (retryCount < 1) {
-          console.log(`🔄 Nominatim API retry denemesi ${retryCount + 1}/1...`);
+          console.log(
+            `🔄 Google Places API retry denemesi ${retryCount + 1}/1...`,
+          );
           // Daha uzun bekleme süresi
           setTimeout(() => fetchPlaces(text, retryCount + 1), 3000);
           return;
         }
 
         console.warn(
-          "⚠️ Nominatim API yavaş yanıt veriyor. Varsayılan yerler gösteriliyor.",
+          "⚠️ Google Places API yavaş yanıt veriyor. Varsayılan yerler gösteriliyor.",
         );
         showDefaultIfEmpty();
         return;
@@ -247,24 +268,41 @@ export default function Discover() {
         error.message?.includes("Failed to fetch")
       ) {
         console.warn(
-          "⚠️ Nominatim API network hatası - internet bağlantısını kontrol edin",
+          "⚠️ Google Places API network hatası - internet bağlantısını kontrol edin",
         );
 
         // Retry mekanizması (maksimum 1 deneme - rate limit'i önlemek için)
         if (retryCount < 1) {
-          console.log(`🔄 Nominatim API retry denemesi ${retryCount + 1}/1...`);
+          console.log(
+            `🔄 Google Places API retry denemesi ${retryCount + 1}/1...`,
+          );
           // Network hatalarında daha uzun bekleme
           setTimeout(() => fetchPlaces(text, retryCount + 1), 3000);
           return;
         }
-
         console.warn(
           "⚠️ İnternet bağlantısı hatası. Varsayılan yerler gösteriliyor.",
         );
         showDefaultIfEmpty();
         return;
       } else {
-        console.error("❌ Discover search failed:", error.message || error);
+        const message = error?.message || String(error);
+        console.error("❌ Discover search failed:", message);
+
+        const isPermissionIssue =
+          message.includes("403") ||
+          message.includes("PERMISSION_DENIED") ||
+          message.includes("REQUEST_DENIED") ||
+          message.includes("API key") ||
+          message.includes("not enabled");
+
+        if (isPermissionIssue && !placesConfigAlertShown) {
+          setPlacesConfigAlertShown(true);
+          Alert.alert(
+            "Google Places Ayarı Gerekli",
+            "API 403 dönüyor. Places API (New) etkin, billing açık ve API key kısıtları doğru olmalı.",
+          );
+        }
       }
 
       showDefaultIfEmpty();
@@ -480,7 +518,7 @@ export default function Discover() {
               marginTop: 10,
             }}
           >
-            {"OpenStreetMap'te Görüntüle ->"}
+            {"Google Maps'te Görüntüle ->"}
           </Text>
         </View>
       </TouchableOpacity>

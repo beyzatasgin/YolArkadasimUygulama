@@ -1,4 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import Constants from "expo-constants";
 import { useNavigation, useRouter } from "expo-router";
 import {
   useCallback,
@@ -29,7 +30,15 @@ export default function SearchPlace() {
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [searchTimeout, setSearchTimeout] = useState(null);
   const [lastSearchTime, setLastSearchTime] = useState(0);
+  const [placesConfigAlertShown, setPlacesConfigAlertShown] = useState(false);
   const router = useRouter();
+
+  const getGooglePlacesApiKey = () =>
+    process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY ||
+    process.env.EXPO_PUBLIC_GOOGLE_MAP_KEY ||
+    Constants.expoConfig?.extra?.googlePlacesApiKey ||
+    Constants.expoConfig?.extra?.googleMapKey ||
+    Constants.manifest?.extra?.googlePlacesApiKey;
 
   const handleGoBack = useCallback(() => {
     if (navigation.canGoBack()) {
@@ -61,7 +70,7 @@ export default function SearchPlace() {
     });
   }, [handleGoBack, navigation]);
 
-  // 🔹 Yer arama (autocomplete) - OpenStreetMap Nominatim API (Retry ve Timeout ile)
+  // 🔹 Yer arama - Google Places API (New) autocomplete
   const searchPlaces = async (text, retryCount = 0) => {
     if (text.length < 2) {
       setPredictions([]);
@@ -70,48 +79,65 @@ export default function SearchPlace() {
 
     setLoading(true);
 
+    const apiKey = getGooglePlacesApiKey();
+    if (!apiKey || apiKey.includes("YOUR_")) {
+      console.warn("⚠️ Google Places API key bulunamadı.");
+      setPredictions([]);
+      setLoading(false);
+      return;
+    }
+
     // Timeout kontrolü için AbortController
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 saniye timeout
 
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-          text,
-        )}&format=json&limit=8&addressdetails=1&extratags=1&namedetails=1&countrycodes=tr&accept-language=tr`,
+      const autoCompleteResponse = await fetch(
+        `https://places.googleapis.com/v1/places:autocomplete?key=${apiKey}`,
         {
+          method: "POST",
           headers: {
-            "User-Agent": "YolArkadasim/1.0", // Nominatim için gerekli
-            Accept: "application/json",
+            "Content-Type": "application/json",
+            "X-Goog-FieldMask":
+              "suggestions.placePrediction.placeId,suggestions.placePrediction.text",
           },
-          signal: controller.signal, // Timeout kontrolü
+          body: JSON.stringify({
+            input: text,
+            languageCode: "tr",
+          }),
+          signal: controller.signal,
         },
       );
 
-      clearTimeout(timeoutId); // Başarılı ise timeout'u temizle
+      clearTimeout(timeoutId);
 
-      // Response kontrolü
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!autoCompleteResponse.ok) {
+        const errorBody = await autoCompleteResponse.json().catch(() => ({}));
+        const errorMessage =
+          errorBody?.error?.message ||
+          `HTTP error! status: ${autoCompleteResponse.status}`;
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
+      const data = await autoCompleteResponse.json();
 
-      if (Array.isArray(data) && data.length > 0) {
-        // Nominatim sonuçlarını Google Places formatına benzer şekilde dönüştür
-        const formattedPredictions = data.map((place) => ({
-          place_id: place.place_id || place.osm_id,
-          description: place.display_name,
-          structured_formatting: {
-            main_text:
-              place.name || place.display_name?.split(",")[0] || "Bilinmeyen",
-            secondary_text:
-              place.display_name?.split(",").slice(1).join(",").trim() || "",
-          },
-          lat: parseFloat(place.lat),
-          lon: parseFloat(place.lon),
-          address: place.address,
-        }));
+      if (Array.isArray(data?.suggestions) && data.suggestions.length > 0) {
+        const formattedPredictions = data.suggestions
+          .map((item) => item.placePrediction)
+          .filter(Boolean)
+          .map((place) => {
+            const fullText = place.text?.text || "Bilinmeyen";
+            const [main, ...rest] = fullText.split(",");
+            return {
+              place_id: place.placeId,
+              description: fullText,
+              structured_formatting: {
+                main_text: main?.trim() || "Bilinmeyen",
+                secondary_text: rest.join(",").trim(),
+              },
+            };
+          });
+
         setPredictions(formattedPredictions);
       } else {
         setPredictions([]);
@@ -122,12 +148,14 @@ export default function SearchPlace() {
       // Abort hatası (timeout)
       if (error.name === "AbortError") {
         console.warn(
-          "⚠️ Nominatim API timeout - istek 15 saniye içinde tamamlanamadı",
+          "⚠️ Google Places API timeout - istek zamanında tamamlanamadı",
         );
 
         // Retry mekanizması (maksimum 1 deneme - rate limit'i önlemek için)
         if (retryCount < 1) {
-          console.log(`🔄 Nominatim API retry denemesi ${retryCount + 1}/1...`);
+          console.log(
+            `🔄 Google Places API retry denemesi ${retryCount + 1}/1...`,
+          );
           // Daha uzun bekleme süresi
           setTimeout(() => searchPlaces(text, retryCount + 1), 3000);
           return;
@@ -136,7 +164,7 @@ export default function SearchPlace() {
         // Timeout sonrası kullanıcıya bilgi ver
         setPredictions([]);
         console.warn(
-          "⚠️ Nominatim API yavaş yanıt veriyor. Lütfen daha sonra tekrar deneyin.",
+          "⚠️ Google Places API yavaş yanıt veriyor. Lütfen daha sonra tekrar deneyin.",
         );
         return;
       }
@@ -147,12 +175,14 @@ export default function SearchPlace() {
         error.message?.includes("Failed to fetch")
       ) {
         console.warn(
-          "⚠️ Nominatim API network hatası - internet bağlantısını kontrol edin",
+          "⚠️ Google Places API network hatası - internet bağlantısını kontrol edin",
         );
 
         // Retry mekanizması (maksimum 1 deneme - rate limit'i önlemek için)
         if (retryCount < 1) {
-          console.log(`🔄 Nominatim API retry denemesi ${retryCount + 1}/1...`);
+          console.log(
+            `🔄 Google Places API retry denemesi ${retryCount + 1}/1...`,
+          );
           // Network hatalarında daha uzun bekleme
           setTimeout(() => searchPlaces(text, retryCount + 1), 3000);
           return;
@@ -165,7 +195,23 @@ export default function SearchPlace() {
         );
         return;
       } else {
-        console.error("❌ Nominatim API hatası:", error.message || error);
+        const message = error?.message || String(error);
+        console.error("❌ Google Places API hatası:", message);
+
+        const isPermissionIssue =
+          message.includes("403") ||
+          message.includes("PERMISSION_DENIED") ||
+          message.includes("REQUEST_DENIED") ||
+          message.includes("API key") ||
+          message.includes("not enabled");
+
+        if (isPermissionIssue && !placesConfigAlertShown) {
+          setPlacesConfigAlertShown(true);
+          Alert.alert(
+            "Google Places Ayarı Gerekli",
+            "API 403 dönüyor. Google Cloud'da Places API (New) etkin ve faturalandırma açık olmalı. Ayrıca API key kısıtlarını kontrol edin.",
+          );
+        }
       }
 
       setPredictions([]);
@@ -222,8 +268,7 @@ export default function SearchPlace() {
     };
   }, [searchTimeout]);
 
-  // OpenStreetMap kullanıldığı için görsel çekme API'si yok
-  // Sadece fallback görselleri kullanıyoruz
+  // Google Places fotoğrafı yoksa fallback görsel kullan
   const getPlaceImageUrl = (placeName) => {
     return getFallbackImageUrl(placeName);
   };
@@ -277,22 +322,27 @@ export default function SearchPlace() {
     }
   };
 
-  // 🔹 Seçilen yerin detaylarını çek - OpenStreetMap Nominatim API (Retry ve Timeout ile)
+  // 🔹 Seçilen yerin detaylarını çek - Google Places API (New) details
   const fetchPlaceDetails = async (placeId, lat, lon, retryCount = 0) => {
+    const apiKey = getGooglePlacesApiKey();
+    if (!apiKey || apiKey.includes("YOUR_")) {
+      console.warn("⚠️ Google Places API key bulunamadı.");
+      return;
+    }
+
     // Timeout kontrolü için AbortController
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 saniye timeout
 
     try {
-      // Reverse geocoding ile detaylı bilgi al
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1&extratags=1&namedetails=1&accept-language=tr`,
+        `https://places.googleapis.com/v1/places/${placeId}?languageCode=tr&key=${apiKey}`,
         {
           headers: {
-            "User-Agent": "YolArkadasim/1.0",
-            Accept: "application/json",
+            "X-Goog-FieldMask":
+              "id,displayName,formattedAddress,location,googleMapsUri,rating,userRatingCount,regularOpeningHours.openNow,photos.name",
           },
-          signal: controller.signal, // Timeout kontrolü
+          signal: controller.signal,
         },
       );
 
@@ -300,45 +350,46 @@ export default function SearchPlace() {
 
       // Response kontrolü
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorBody = await response.json().catch(() => ({}));
+        const errorMessage =
+          errorBody?.error?.message || `HTTP error! status: ${response.status}`;
+        throw new Error(errorMessage);
       }
 
       const place = await response.json();
 
       if (place && !place.error) {
-        // OpenStreetMap URL oluştur
-        const osmUrl = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}&zoom=15`;
+        const latitude = place.location?.latitude ?? parseFloat(lat || 0);
+        const longitude = place.location?.longitude ?? parseFloat(lon || 0);
+        const googleMapsUrl =
+          place.googleMapsUri ||
+          `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
 
-        const placeName =
-          place.name ||
-          place.address?.name ||
-          place.display_name?.split(",")[0] ||
-          "Bilinmeyen Yer";
-
-        // OpenStreetMap kullanıldığı için fallback görsel kullan
-        const photoUrl = getPlaceImageUrl(placeName);
+        const placeName = place.displayName?.text || "Bilinmeyen Yer";
+        const photoName = place.photos?.[0]?.name;
+        const photoUrl = photoName
+          ? `https://places.googleapis.com/v1/${photoName}/media?maxHeightPx=1200&key=${apiKey}`
+          : getPlaceImageUrl(placeName);
 
         const details = {
           name: placeName,
-          address:
-            place.display_name ||
-            `${place.address?.road || ""}, ${place.address?.city || place.address?.town || place.address?.village || ""}`.trim(),
+          address: place.formattedAddress || "Adres bilgisi yok",
           coordinates: {
-            lat: parseFloat(lat),
-            lon: parseFloat(lon),
+            lat: latitude,
+            lon: longitude,
           },
-          url: osmUrl,
-          photoUrl: photoUrl, // Fallback görsel
-          rating: null, // OpenStreetMap'te rating yok
-          totalReviews: null,
-          isOpenNow: null, // OpenStreetMap'te açılış saatleri yok
+          url: googleMapsUrl,
+          photoUrl,
+          rating: place.rating || null,
+          totalReviews: place.userRatingCount || null,
+          isOpenNow: place.regularOpeningHours?.openNow ?? null,
         };
 
         setSelectedPlace(details);
         console.log("📍 Detaylı yer bilgisi:", details);
         console.log("📸 Görsel URL:", photoUrl);
       } else {
-        throw new Error(place?.error || "Yer bilgisi alınamadı");
+        throw new Error(place?.error?.message || "Yer bilgisi alınamadı");
       }
     } catch (error) {
       clearTimeout(timeoutId); // Hata durumunda timeout'u temizle
@@ -346,12 +397,14 @@ export default function SearchPlace() {
       // Abort hatası (timeout)
       if (error.name === "AbortError") {
         console.warn(
-          "⚠️ Nominatim API timeout - yer detayları 10 saniye içinde alınamadı",
+          "⚠️ Google Places API timeout - yer detayları zamanında alınamadı",
         );
 
         // Retry mekanizması (maksimum 2 deneme)
         if (retryCount < 2) {
-          console.log(`🔄 Nominatim API retry denemesi ${retryCount + 1}/2...`);
+          console.log(
+            `🔄 Google Places API retry denemesi ${retryCount + 1}/2...`,
+          );
           setTimeout(
             () => fetchPlaceDetails(placeId, lat, lon, retryCount + 1),
             1000,
@@ -366,12 +419,14 @@ export default function SearchPlace() {
         error.message?.includes("Failed to fetch")
       ) {
         console.warn(
-          "⚠️ Nominatim API network hatası - yer detayları alınamadı",
+          "⚠️ Google Places API network hatası - yer detayları alınamadı",
         );
 
         // Retry mekanizması (maksimum 2 deneme)
         if (retryCount < 2) {
-          console.log(`🔄 Nominatim API retry denemesi ${retryCount + 1}/2...`);
+          console.log(
+            `🔄 Google Places API retry denemesi ${retryCount + 1}/2...`,
+          );
           setTimeout(
             () => fetchPlaceDetails(placeId, lat, lon, retryCount + 1),
             2000,
@@ -387,7 +442,7 @@ export default function SearchPlace() {
             lat: parseFloat(lat),
             lon: parseFloat(lon),
           },
-          url: `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}&zoom=15`,
+          url: `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`,
           photoUrl: getPlaceImageUrl("travel"),
           rating: null,
           totalReviews: null,
@@ -396,7 +451,7 @@ export default function SearchPlace() {
         setSelectedPlace(fallbackDetails);
         console.log("📍 Fallback yer bilgisi kullanılıyor:", fallbackDetails);
       } else {
-        console.error("❌ Nominatim API hatası:", error.message || error);
+        console.error("❌ Google Places API hatası:", error.message || error);
       }
     }
   };
@@ -404,7 +459,7 @@ export default function SearchPlace() {
   const selectPlace = (prediction) => {
     setSearchText(prediction.description);
     setPredictions([]);
-    fetchPlaceDetails(prediction.place_id, prediction.lat, prediction.lon);
+    fetchPlaceDetails(prediction.place_id, null, null);
   };
 
   // Seçilen yeri context'e kaydet ve tarih seçimine geç
@@ -565,7 +620,7 @@ export default function SearchPlace() {
               }}
             >
               <Text style={{ fontFamily: "outfit", color: Colors.GRAY }}>
-                OpenStreetMap
+                Google Maps
               </Text>
             </View>
 
@@ -590,7 +645,7 @@ export default function SearchPlace() {
                     textDecorationLine: "underline",
                   }}
                 >
-                  {"OpenStreetMap'te Görüntüle"}
+                  {"Google Maps'te Görüntüle"}
                 </Text>
               </TouchableOpacity>
             )}
