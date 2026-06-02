@@ -1,0 +1,277 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useNavigation, useRouter } from "expo-router";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { doc, serverTimestamp, setDoc } from "firebase/firestore";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text,
+  TextInput,
+  ToastAndroid,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { auth, db, firebaseInitError } from "./../../../configs/FirebaseConfig";
+import { getFirebaseAuthInitErrorMessage } from "./../../../configs/FirebaseMessages";
+import { Colors } from "./../../../constants/Colors";
+export default function SignUp() {
+  const navigation = useNavigation();
+  const router = useRouter();
+  const [email, setEmail] = useState();
+  const [password, setPassword] = useState();
+  const [fullName, setFullName] = useState();
+  const [showPassword, setShowPassword] = useState(false);
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  useEffect(() => {
+    navigation.setOptions({
+      headerShown: false,
+    });
+  }, [navigation]);
+
+  const OnCreateAccount = () => {
+    // Çift tıklama / tekrar tetiklenme koruması
+    if (isCreatingAccount) {
+      return;
+    }
+
+    if (!auth) {
+      const initMessage = getFirebaseAuthInitErrorMessage(firebaseInitError);
+      ToastAndroid.show(initMessage, ToastAndroid.LONG);
+      return;
+    }
+
+    const trimmedEmail = email?.trim().toLowerCase();
+    const trimmedPassword = password?.trim();
+    const trimmedFullName = fullName?.trim();
+
+    if (!trimmedEmail || !trimmedPassword || !trimmedFullName) {
+      ToastAndroid.show("Lütfen tüm bilgileri girin", ToastAndroid.LONG);
+      return;
+    }
+
+    setIsCreatingAccount(true);
+    createUserWithEmailAndPassword(auth, trimmedEmail, trimmedPassword)
+      .then(async (userCredential) => {
+        // Signed up
+        const user = userCredential.user;
+
+        // Kullanıcı adını ayarla (fotoğraf boş kalacak)
+        if (fullName) {
+          try {
+            await updateProfile(user, {
+              displayName: trimmedFullName,
+              // photoURL eklemiyoruz, böylece boş kalacak
+            });
+          } catch (error) {
+            console.error("Profil güncelleme hatası:", error);
+          }
+        }
+
+        // Sosyal arama için profil dokümanını kesin oluştur
+        if (db) {
+          await setDoc(
+            doc(db, "userProfiles", user.uid),
+            {
+              uid: user.uid,
+              displayName: trimmedFullName || "Kullanıcı",
+              displayNameLower: (trimmedFullName || "Kullanıcı").toLowerCase(),
+              email: trimmedEmail,
+              searchableEmail: trimmedEmail,
+              photoURL: null,
+              isOnline: true,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+              lastSeen: serverTimestamp(),
+            },
+            { merge: true },
+          );
+        }
+
+        router.replace("/mytrip");
+        console.log(user);
+        // ...
+      })
+      .catch((error) => {
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        console.log(errorMessage, errorCode);
+        // ..
+      })
+      .finally(() => {
+        setIsCreatingAccount(false);
+      });
+  };
+
+  return (
+    <View
+      style={{
+        padding: 25,
+        paddingTop: 50,
+        backgroundColor: Colors.WHITE,
+        height: "100%",
+      }}
+    >
+      <TouchableOpacity onPress={() => router.back()}>
+        <Ionicons name="arrow-back" size={24} color="black" />
+      </TouchableOpacity>
+      <Text
+        style={{
+          fontFamily: "outfit-bold",
+          fontSize: 30,
+          marginTop: 30,
+        }}
+      >
+        Yeni Hesap Oluştur
+      </Text>
+      {/* User Full Name*/}
+      <View
+        style={{
+          marginTop: 50,
+        }}
+      >
+        <Text
+          style={{
+            fontFamily: "outfit",
+          }}
+        >
+          {" "}
+          Ad Soyad{" "}
+        </Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Ad ve soyadınızı girin"
+          onChangeText={(value) => setFullName(value)}
+        />
+      </View>
+
+      {/* Email*/}
+      <View
+        style={{
+          marginTop: 20,
+        }}
+      >
+        <Text
+          style={{
+            fontFamily: "outfit",
+          }}
+        >
+          {" "}
+          E-posta{" "}
+        </Text>
+        <TextInput
+          style={styles.input}
+          onChangeText={(value) => setEmail(value)}
+          placeholder="E-posta adresinizi girin"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+      </View>
+      {/* Password*/}
+      <View
+        style={{
+          marginTop: 20,
+        }}
+      >
+        <Text
+          style={{
+            fontFamily: "outfit",
+          }}
+        >
+          {" "}
+          Şifre{" "}
+        </Text>
+        <View style={styles.passwordWrapper}>
+          <TextInput
+            secureTextEntry={!showPassword}
+            style={[styles.input, styles.passwordInput]}
+            onChangeText={(value) => setPassword(value)}
+            placeholder="Şifrenizi girin"
+          />
+          <TouchableOpacity
+            onPress={() => setShowPassword((prev) => !prev)}
+            style={styles.passwordToggle}
+          >
+            <Ionicons
+              name={showPassword ? "eye-off-outline" : "eye-outline"}
+              size={20}
+              color={Colors.GRAY}
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/*Create Account Button*/}
+      <TouchableOpacity
+        onPress={OnCreateAccount}
+        disabled={isCreatingAccount}
+        style={{
+          padding: 15,
+          backgroundColor: Colors.PRIMARY,
+          borderRadius: 15,
+          marginTop: 50,
+          opacity: isCreatingAccount ? 0.7 : 1,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {isCreatingAccount ? (
+          <ActivityIndicator color={Colors.WHITE} />
+        ) : (
+          <Text
+            style={{
+              color: Colors.WHITE,
+              textAlign: "center",
+            }}
+          >
+            Hesap Oluştur
+          </Text>
+        )}
+      </TouchableOpacity>
+
+      {/*Sign In Button*/}
+      <TouchableOpacity
+        onPress={() => router.replace("auth/sign-in")}
+        style={{
+          padding: 15,
+          backgroundColor: Colors.WHITE,
+          borderRadius: 15,
+          marginTop: 20,
+          borderWidth: 1,
+        }}
+      >
+        <Text
+          style={{
+            color: Colors.PRIMARY,
+            textAlign: "center",
+          }}
+        >
+          Giriş Yap
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+const styles = StyleSheet.create({
+  input: {
+    padding: 15,
+    borderWidth: 1,
+    borderRadius: 15,
+    borderColor: Colors.GRAY,
+    fontFamily: "outfit",
+  },
+  passwordWrapper: {
+    position: "relative",
+    justifyContent: "center",
+  },
+  passwordInput: {
+    paddingRight: 46,
+  },
+  passwordToggle: {
+    position: "absolute",
+    right: 14,
+    top: 13,
+  },
+});
