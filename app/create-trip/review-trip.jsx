@@ -15,6 +15,14 @@ import {
 import { Colors } from "../../constants/Colors";
 import { CreateTripContext } from "../../context/CreateTripContext";
 
+const getOpenAiApiKey = () =>
+  process.env.EXPO_PUBLIC_OPENAI_API_KEY ||
+  Constants.expoConfig?.extra?.openaiApiKey ||
+  Constants.manifest?.extra?.openaiApiKey;
+
+const isQuotaOrRateLimitError = (message = "") =>
+  /429|quota|rate limit|retry|resource_exhausted/i.test(message);
+
 export default function ReviewTrip() {
   const navigation = useNavigation();
   const router = useRouter();
@@ -37,7 +45,7 @@ export default function ReviewTrip() {
     apiKey,
     textQuery,
     coordinates,
-    maxResultCount = 6,
+    maxResultCount = 3,
   ) => {
     const response = await fetch(
       `https://places.googleapis.com/v1/places:searchText?key=${apiKey}`,
@@ -99,9 +107,10 @@ export default function ReviewTrip() {
   const formatCandidatesForPrompt = (items) => {
     if (!items || items.length === 0) return "- Veri bulunamadı";
     return items
+      .slice(0, 3)
       .map((item) => {
         const ratingText = item.rating ? ` | Puan: ${item.rating}` : "";
-        return `- ${item.name}${ratingText} | ${item.address}`;
+        return `- ${item.name}${ratingText}`;
       })
       .join("\n");
   };
@@ -174,7 +183,7 @@ export default function ReviewTrip() {
   };
 
   const parseAIResponse = (data) => {
-    const responseText = data.choices?.[0]?.message?.content;
+    const responseText = data;
     if (!responseText) {
       throw new Error("AI yanıtı alınamadı");
     }
@@ -215,11 +224,15 @@ export default function ReviewTrip() {
 
     setGeneratingAI(true);
 
+    const placeName = tripData.selectedPlace.name;
+    const startDate = formatDate(tripData.startDate);
+    const endDate = formatDate(tripData.endDate);
+    const duration = tripData.duration || 1;
+    const googlePlacesApiKey = getGooglePlacesApiKey();
+    let googleRecommendations = null;
+
     try {
-      const apiKey =
-        process.env.EXPO_PUBLIC_OPENAI_API_KEY ||
-        Constants.expoConfig?.extra?.openaiApiKey ||
-        Constants.manifest?.extra?.openaiApiKey;
+      const apiKey = getOpenAiApiKey();
 
       if (!apiKey || apiKey.trim().length === 0 || apiKey.includes("YOUR_")) {
         throw new Error(
@@ -227,13 +240,6 @@ export default function ReviewTrip() {
         );
       }
 
-      const placeName = tripData.selectedPlace.name;
-      const startDate = formatDate(tripData.startDate);
-      const endDate = formatDate(tripData.endDate);
-      const duration = tripData.duration || 1;
-      const googlePlacesApiKey = getGooglePlacesApiKey();
-
-      let googleRecommendations = null;
       if (googlePlacesApiKey && !googlePlacesApiKey.includes("YOUR_")) {
         try {
           const coordinates = tripData?.selectedPlace?.coordinates;
@@ -314,7 +320,7 @@ Kurallar:
             Authorization: `Bearer ${apiKey}`,
           },
           body: JSON.stringify({
-            model: "gpt-3.5-turbo",
+            model: "gpt-4o-mini",
             messages: [
               {
                 role: "user",
@@ -328,14 +334,26 @@ Kurallar:
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMessage =
+        const rawMessage =
           errorData.error?.message ||
           `API hatası: ${response.status} ${response.statusText}`;
-        throw new Error(errorMessage);
+        const errorType = errorData.error?.type || "";
+
+        if (
+          response.status === 429 ||
+          /quota|exceeded/i.test(rawMessage) ||
+          errorType === "insufficient_quota"
+        ) {
+          throw new Error(
+            "Kota aşıldı: OpenAI kullanım kotanız dolmuş olabilir. Lütfen plan ve faturalandırma bilgilerinizi kontrol edin: https://platform.openai.com/account/billing",
+          );
+        }
+
+        throw new Error(rawMessage);
       }
 
       const data = await response.json();
-      const aiPlan = parseAIResponse(data);
+      const aiPlan = parseAIResponse(data.choices?.[0]?.message?.content);
 
       if (googleRecommendations) {
         aiPlan.recommendations = {
@@ -358,10 +376,12 @@ Kurallar:
       });
       router.push("/create-trip/generate-ai-trip");
     } catch (error) {
-      Alert.alert(
-        "AI Plan Hatası",
-        error?.message || "Plan oluşturulurken bir hata oluştu.",
-      );
+      const rawMessage = error?.message || "";
+      const alertMessage = isQuotaOrRateLimitError(rawMessage)
+        ? "OpenAI kota limiti doldu. Biraz bekleyip tekrar deneyin veya OpenAI faturalandırma/billing durumunu kontrol edin."
+        : rawMessage || "Plan oluşturulurken bir hata oluştu.";
+
+      Alert.alert("AI Plan Hatası", alertMessage);
     } finally {
       setGeneratingAI(false);
     }

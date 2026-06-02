@@ -20,6 +20,14 @@ import {
 import { Colors } from "../../constants/Colors";
 import { CreateTripContext } from "../../context/CreateTripContext";
 
+const getOpenAiApiKey = () =>
+  process.env.EXPO_PUBLIC_OPENAI_API_KEY ||
+  Constants.expoConfig?.extra?.openaiApiKey ||
+  Constants.manifest?.extra?.openaiApiKey;
+
+const isQuotaOrRateLimitError = (message = "") =>
+  /429|quota|rate limit|retry|resource_exhausted/i.test(message);
+
 export default function GenerateAITrip() {
   const navigation = useNavigation();
   const router = useRouter();
@@ -40,11 +48,8 @@ export default function GenerateAITrip() {
   }, [navigation, router]);
 
   useEffect(() => {
-    // API key kontrolü - hem process.env hem de Constants.manifest.extra'dan oku
-    const apiKey =
-      process.env.EXPO_PUBLIC_OPENAI_API_KEY ||
-      Constants.expoConfig?.extra?.openaiApiKey ||
-      Constants.manifest?.extra?.openaiApiKey;
+    // OpenAI API key kontrolü - hem process.env hem de Constants.manifest.extra'dan oku
+    const apiKey = getOpenAiApiKey();
     const isValid =
       apiKey && apiKey.trim().length > 0 && !apiKey.includes("YOUR_");
     setApiKeyAvailable(isValid);
@@ -96,9 +101,7 @@ export default function GenerateAITrip() {
   };
 
   // AI yanıtını parse et ve validate et
-  const parseAIResponse = (data) => {
-    const responseText = data.choices?.[0]?.message?.content;
-
+  const parseAIResponse = (responseText) => {
     if (!responseText) {
       throw new Error("AI yanıtı alınamadı");
     }
@@ -151,10 +154,7 @@ export default function GenerateAITrip() {
 
     try {
       // API key'i farklı kaynaklardan oku
-      const apiKey =
-        process.env.EXPO_PUBLIC_OPENAI_API_KEY ||
-        Constants.expoConfig?.extra?.openaiApiKey ||
-        Constants.manifest?.extra?.openaiApiKey;
+      const apiKey = getOpenAiApiKey();
 
       if (!apiKey || apiKey.trim().length === 0 || apiKey.includes("YOUR_")) {
         throw new Error(
@@ -173,7 +173,7 @@ export default function GenerateAITrip() {
           ? tripData.interests.join(", ")
           : "Genel";
 
-      // OpenAI API için prompt oluştur
+      // OpenAI için prompt oluştur
       const prompt = `Sen bir seyahat planlama uzmanısın. Aşağıdaki bilgilere göre detaylı bir seyahat planı oluştur:
 
 Yer: ${placeName}
@@ -208,13 +208,11 @@ Sadece JSON formatında cevap ver, başka açıklama yapma. Her gün için 4-5 a
 
       console.log("🤖 OpenAI API çağrılıyor...");
 
-      // OpenAI API çağrısı - GPT-3.5-turbo modeli kullanılıyor
-      const modelName = "gpt-3.5-turbo";
+      const modelName = "gpt-4o-mini";
       const apiUrl = "https://api.openai.com/v1/chat/completions";
 
       console.log("📡 API URL:", apiUrl);
       console.log("🔑 API Key uzunluğu:", apiKey ? apiKey.length : 0);
-      console.log("🤖 Model:", modelName);
 
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -236,37 +234,45 @@ Sadece JSON formatında cevap ver, başka açıklama yapma. Her gün için 4-5 a
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        const errorMessage =
+        const rawMessage =
           errorData.error?.message ||
           `API hatası: ${response.status} ${response.statusText}`;
+        const errorType = errorData.error?.type || "";
 
         console.error("❌ API Hatası:", {
           status: response.status,
           statusText: response.statusText,
           error: errorData.error,
-          message: errorMessage,
+          message: rawMessage,
         });
 
-        // API key geçersizse veya başka hata varsa
         if (
-          errorMessage.includes("Invalid API key") ||
-          errorMessage.includes("API key not valid") ||
-          errorMessage.includes("incorrect API key")
+          response.status === 429 ||
+          /quota|exceeded/i.test(rawMessage) ||
+          errorType === "insufficient_quota"
+        ) {
+          throw new Error(
+            "Kota aşıldı: OpenAI kullanım kotanız dolmuş olabilir. Lütfen plan ve faturalandırma bilgilerinizi kontrol edin: https://platform.openai.com/account/billing",
+          );
+        }
+
+        if (
+          /Invalid API key|API key not valid|incorrect API key/i.test(
+            rawMessage,
+          )
         ) {
           throw new Error(
             "OpenAI API anahtarı geçersiz. Lütfen .env dosyasındaki EXPO_PUBLIC_OPENAI_API_KEY değerini kontrol edin.",
           );
         }
 
-        // Diğer hatalar için
-        throw new Error(errorMessage);
+        throw new Error(rawMessage);
       }
 
       const data = await response.json();
       console.log("✅ OpenAI API yanıtı alındı:", data);
 
-      // OpenAI API yanıtını parse et ve validate et
-      const aiPlan = parseAIResponse(data);
+      const aiPlan = parseAIResponse(data.choices?.[0]?.message?.content);
       setAiPlan(aiPlan);
     } catch (err) {
       console.error("AI Plan generation error:", err);
@@ -277,6 +283,9 @@ Sadece JSON formatında cevap ver, başka açıklama yapma. Her gün için 4-5 a
       if (err.message) {
         if (err.message.includes("API anahtarı")) {
           errorMessage = err.message;
+        } else if (isQuotaOrRateLimitError(err.message)) {
+          errorMessage =
+            "OpenAI kota limiti doldu. Biraz bekleyip tekrar deneyin veya OpenAI faturalandırma/billing durumunu kontrol edin.";
         } else if (err.message.includes("API hatası")) {
           errorMessage = `API hatası: ${err.message}. Lütfen API anahtarınızı kontrol edin.`;
         } else {
@@ -312,8 +321,8 @@ Sadece JSON formatında cevap ver, başka açıklama yapma. Her gün için 4-5 a
           <Ionicons name="sparkles" size={48} color={Colors.PRIMARY} />
           <Text style={styles.title}>AI ile Seyahat Planı Oluştur</Text>
           <Text style={styles.subtitle}>
-            Yapay zeka, seçtiğiniz yer ve tarihe göre size özel bir seyahat
-            planı hazırlayacak
+            OpenAI, seçtiğiniz yer ve tarihe göre size özel bir seyahat planı
+            hazırlayacak
           </Text>
         </View>
 

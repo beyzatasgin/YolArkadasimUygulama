@@ -2,7 +2,7 @@
 
 Modern ve kullanıcı dostu bir seyahat planlama uygulaması. AI destekli önerilerle kişiselleştirilmiş seyahat deneyimleri sunar.
 
-##  Özellikler
+## Özellikler
 
 - **AI Destekli Seyahat Planlama**: Yapay zeka ile kişiselleştirilmiş seyahat önerileri
 - **OpenStreetMap Entegrasyonu**: Ücretsiz ve açık kaynak yer arama ve detayları
@@ -10,7 +10,7 @@ Modern ve kullanıcı dostu bir seyahat planlama uygulaması. AI destekli öneri
 - **Modern UI/UX**: React Native ve Expo ile geliştirilmiş responsive tasarım
 - **Çoklu Platform Desteği**: iOS, Android ve Web
 
-##  Teknolojiler
+## Teknolojiler
 
 - **React Native** - Mobil uygulama geliştirme
 - **Expo** - Geliştirme ve dağıtım platformu
@@ -19,21 +19,24 @@ Modern ve kullanıcı dostu bir seyahat planlama uygulaması. AI destekli öneri
 - **TypeScript** - Tip güvenliği
 - **Expo Router** - Navigasyon
 
-##  Kurulum
+## Kurulum
 
 1. **Projeyi klonlayın**
+
    ```bash
    git clone <repository-url>
    cd yolarkadasim
    ```
 
 2. **Bağımlılıkları yükleyin**
+
    ```bash
    npm install
    ```
 
 3. **Environment variables ayarlayın**
    `.env` dosyası oluşturun ve Firebase ve OpenAI API anahtarlarınızı ekleyin:
+
    ```
    EXPO_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key
    EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
@@ -45,8 +48,8 @@ Modern ve kullanıcı dostu bir seyahat planlama uygulaması. AI destekli öneri
    EXPO_PUBLIC_OPENAI_API_KEY=your_openai_api_key
    EXPO_PUBLIC_GOOGLE_PLACES_API_KEY=your_google_places_api_key
    ```
-   
-   **Notlar**: 
+
+   **Notlar**:
    - OpenStreetMap Nominatim API ücretsizdir ve API anahtarı gerektirmez. Ancak kullanım limitleri için lütfen [Nominatim Kullanım Politikası](https://operations.osmfoundation.org/policies/nominatim/)'nı okuyun.
    - OpenAI API anahtarı için [OpenAI Platform](https://platform.openai.com/api-keys) adresinden API anahtarı alabilirsiniz.
    - Google Places API anahtarı için [Google Cloud Console](https://console.cloud.google.com/) adresinden:
@@ -55,21 +58,21 @@ Modern ve kullanıcı dostu bir seyahat planlama uygulaması. AI destekli öneri
      3. "Places API" ve "Places API (New)" servislerini etkinleştirin
      4. "Credentials" bölümünden API anahtarı oluşturun
      5. API anahtarını `.env` dosyasına `EXPO_PUBLIC_GOOGLE_PLACES_API_KEY` olarak ekleyin
-     **Önemli**: Google Places API ücretlidir, ancak ilk $200 ücretsiz krediniz var. Detaylar için [Google Places API Fiyatlandırma](https://developers.google.com/maps/documentation/places/web-service/usage-and-billing) sayfasına bakın.
+        **Önemli**: Google Places API ücretlidir, ancak ilk $200 ücretsiz krediniz var. Detaylar için [Google Places API Fiyatlandırma](https://developers.google.com/maps/documentation/places/web-service/usage-and-billing) sayfasına bakın.
 
 4. **Uygulamayı başlatın**
    ```bash
    npm start
    ```
 
-##  Geliştirme
+## Geliştirme
 
 - **Linting**: `npm run lint`
 - **Android**: `npm run android`
 - **iOS**: `npm run ios`
 - **Web**: `npm run web`
 
-##  Proje Yapısı
+## Proje Yapısı
 
 ```
 yolarkadasim/
@@ -84,11 +87,8 @@ yolarkadasim/
 └── assets/               # Statik dosyalar
 ```
 
-##  Güvenlik
+## Güvenlik
 
 - Firebase API anahtarları environment variables ile korunur
 - Kullanıcı verileri Firebase Authentication ile güvenli şekilde yönetilir
 - OpenStreetMap Nominatim API kullanımı için User-Agent header'ı yapılandırılmıştır
-
-
-
