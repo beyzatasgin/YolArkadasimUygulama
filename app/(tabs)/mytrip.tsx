@@ -8,7 +8,8 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Calendar, LocaleConfig } from "react-native-calendars";
 import {
   ActivityIndicator,
   Alert,
@@ -43,6 +44,29 @@ const TEXT_MUTED = "#9CA3AF";
 const SUCCESS = "#10B981";
 const DANGER = "#EF4444";
 
+// Türkçe takvim ayarları
+LocaleConfig.locales["tr"] = {
+  monthNames: ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"],
+  monthNamesShort: ["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"],
+  dayNames: ["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"],
+  dayNamesShort: ["Paz","Pzt","Sal","Çar","Per","Cum","Cmt"],
+  today: "Bugün",
+};
+LocaleConfig.defaultLocale = "tr";
+
+// Her seyahate farklı renk ata (döngüsel)
+const TRIP_COLORS = ["#6366F1","#10B981","#F59E0B","#EF4444","#8B5CF6","#06B6D4","#EC4899","#84CC16"];
+
+function toYMD(date: Date): string {
+  return date.toISOString().split("T")[0];
+}
+
+function addDays(date: Date, days: number): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
 export default function Mytrip() {
   const router = useRouter();
   const { setTripData } = useCreateTrip();
@@ -50,6 +74,65 @@ export default function Mytrip() {
   const [loading, setLoading] = useState(true);
   const [upcomingTrips, setUpcomingTrips] = useState<TripListItem[]>([]);
   const [pastTrips, setPastTrips] = useState<TripListItem[]>([]);
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  // Takvim için renkli period işaretleri
+  const markedDates = useMemo(() => {
+    const marks: Record<string, any> = {};
+    userTrips.forEach((trip, idx) => {
+      if (!trip.startDate) return;
+      const color = TRIP_COLORS[idx % TRIP_COLORS.length];
+      const start = new Date(trip.startDate);
+      const end = trip.endDate ? new Date(trip.endDate) : start;
+      start.setHours(0, 0, 0, 0);
+      end.setHours(0, 0, 0, 0);
+
+      let cur = new Date(start);
+      while (cur <= end) {
+        const key = toYMD(cur);
+        const isStart = cur.getTime() === start.getTime();
+        const isEnd   = cur.getTime() === end.getTime();
+        const existing = marks[key]?.periods ?? [];
+        marks[key] = {
+          periods: [
+            ...existing,
+            { startingDay: isStart, endingDay: isEnd, color },
+          ],
+        };
+        cur = addDays(cur, 1);
+      }
+    });
+    // Seçili gün vurgusu
+    if (selectedDate) {
+      marks[selectedDate] = {
+        ...(marks[selectedDate] ?? {}),
+        selected: true,
+        selectedColor: INDIGO,
+      };
+    }
+    // Bugün
+    const todayKey = toYMD(new Date());
+    if (!marks[todayKey]) {
+      marks[todayKey] = { today: true };
+    }
+    return marks;
+  }, [userTrips, selectedDate]);
+
+  // Seçili güne ait seyahatler
+  const tripsOnSelectedDate = useMemo(() => {
+    if (!selectedDate) return [];
+    const sel = new Date(selectedDate);
+    sel.setHours(0, 0, 0, 0);
+    return userTrips.filter((trip) => {
+      if (!trip.startDate) return false;
+      const start = new Date(trip.startDate);
+      const end   = trip.endDate ? new Date(trip.endDate) : start;
+      start.setHours(0, 0, 0, 0);
+      end.setHours(0, 0, 0, 0);
+      return sel >= start && sel <= end;
+    });
+  }, [selectedDate, userTrips]);
 
   const handleStartNewTrip = () => {
     setTripData(defaultTripData);
@@ -544,20 +627,32 @@ export default function Mytrip() {
           <TouchableOpacity
             onPress={() => router.push("/ai-chat")}
             style={{
-              width: 46,
-              height: 46,
-              borderRadius: 23,
+              width: 46, height: 46, borderRadius: 23,
               backgroundColor: INDIGO,
-              justifyContent: "center",
-              alignItems: "center",
-              shadowColor: INDIGO,
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.4,
-              shadowRadius: 6,
-              elevation: 4,
+              justifyContent: "center", alignItems: "center",
+              shadowColor: INDIGO, shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.4, shadowRadius: 6, elevation: 4,
             }}
           >
             <Ionicons name="sparkles" size={22} color="#fff" />
+          </TouchableOpacity>
+
+          {/* Takvim / Liste Toggle */}
+          <TouchableOpacity
+            onPress={() => setViewMode(v => v === "list" ? "calendar" : "list")}
+            style={{
+              width: 46, height: 46, borderRadius: 23,
+              backgroundColor: viewMode === "calendar" ? "#fff" : "rgba(255,255,255,0.15)",
+              justifyContent: "center", alignItems: "center",
+              borderWidth: viewMode === "calendar" ? 0 : 1,
+              borderColor: "rgba(255,255,255,0.25)",
+            }}
+          >
+            <Ionicons
+              name={viewMode === "calendar" ? "list-outline" : "calendar-outline"}
+              size={22}
+              color={viewMode === "calendar" ? INDIGO : "#fff"}
+            />
           </TouchableOpacity>
 
         {/* White circle + button */}
@@ -656,6 +751,118 @@ export default function Mytrip() {
               </Text>
             </TouchableOpacity>
           </View>
+        </ScrollView>
+      ) : viewMode === "calendar" ? (
+        /* ── TAKVİM GÖRÜNÜMÜ ── */
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+          <Calendar
+            markingType="multi-period"
+            markedDates={markedDates}
+            onDayPress={(day) =>
+              setSelectedDate(prev => prev === day.dateString ? null : day.dateString)
+            }
+            theme={{
+              backgroundColor: "#fff",
+              calendarBackground: "#fff",
+              textSectionTitleColor: TEXT_MUTED,
+              selectedDayBackgroundColor: INDIGO,
+              selectedDayTextColor: "#fff",
+              todayTextColor: INDIGO,
+              dayTextColor: TEXT_PRIMARY,
+              textDisabledColor: "#D1D5DB",
+              dotColor: INDIGO,
+              arrowColor: INDIGO,
+              monthTextColor: TEXT_PRIMARY,
+              textDayFontFamily: "outfit",
+              textMonthFontFamily: "outfit-bold",
+              textDayHeaderFontFamily: "outfit-medium",
+              textDayFontSize: 14,
+              textMonthFontSize: 16,
+              textDayHeaderFontSize: 12,
+            }}
+            style={{ marginHorizontal: 4 }}
+          />
+
+          {/* Renk lejantı */}
+          {userTrips.length > 0 && (
+            <View style={{ paddingHorizontal: 20, paddingTop: 8, gap: 8 }}>
+              <Text style={{ fontFamily: "outfit-bold", fontSize: 13, color: TEXT_MUTED, marginBottom: 4 }}>
+                SEYAHATLER
+              </Text>
+              {userTrips.map((trip, idx) => (
+                <TouchableOpacity
+                  key={trip.id}
+                  onPress={() => router.push(`/trip-detail/${trip.id}`)}
+                  style={{
+                    flexDirection: "row", alignItems: "center", gap: 10,
+                    backgroundColor: "#fff", borderRadius: 12, padding: 12,
+                    shadowColor: "#000", shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
+                  }}
+                >
+                  <View style={{
+                    width: 12, height: 12, borderRadius: 3,
+                    backgroundColor: TRIP_COLORS[idx % TRIP_COLORS.length],
+                  }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: "outfit-medium", fontSize: 14, color: TEXT_PRIMARY }} numberOfLines={1}>
+                      {trip.tripName || trip.selectedPlace?.name || "Seyahat"}
+                    </Text>
+                    {trip.startDate && (
+                      <Text style={{ fontFamily: "outfit", fontSize: 12, color: TEXT_MUTED }}>
+                        {formatDate(trip.startDate)}{trip.endDate ? ` — ${formatDate(trip.endDate)}` : ""}
+                      </Text>
+                    )}
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={TEXT_MUTED} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
+          {/* Seçili güne ait seyahatler */}
+          {selectedDate && (
+            <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
+              <Text style={{ fontFamily: "outfit-bold", fontSize: 15, color: TEXT_PRIMARY, marginBottom: 10 }}>
+                {new Date(selectedDate + "T12:00:00").toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}
+              </Text>
+              {tripsOnSelectedDate.length === 0 ? (
+                <Text style={{ fontFamily: "outfit", fontSize: 14, color: TEXT_MUTED }}>
+                  Bu tarihte planlanmış seyahat yok.
+                </Text>
+              ) : (
+                tripsOnSelectedDate.map((trip, idx) => {
+                  const tripIdx = userTrips.findIndex(t => t.id === trip.id);
+                  const color = TRIP_COLORS[tripIdx % TRIP_COLORS.length];
+                  return (
+                    <TouchableOpacity
+                      key={trip.id}
+                      onPress={() => router.push(`/trip-detail/${trip.id}`)}
+                      style={{
+                        flexDirection: "row", alignItems: "center", gap: 12,
+                        backgroundColor: "#fff", borderRadius: 14, padding: 14,
+                        marginBottom: 10, borderLeftWidth: 4, borderLeftColor: color,
+                        shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.07, shadowRadius: 6, elevation: 2,
+                      }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontFamily: "outfit-bold", fontSize: 15, color: TEXT_PRIMARY }} numberOfLines={1}>
+                          {trip.tripName || trip.selectedPlace?.name || "Seyahat"}
+                        </Text>
+                        <Text style={{ fontFamily: "outfit", fontSize: 13, color: TEXT_MUTED, marginTop: 2 }}>
+                          {trip.selectedPlace?.name}
+                          {trip.duration ? ` • ${trip.duration} gün` : ""}
+                          {trip.travelers ? ` • ${trip.travelers} kişi` : ""}
+                        </Text>
+                      </View>
+                      <Ionicons name="arrow-forward-circle" size={22} color={color} />
+                    </TouchableOpacity>
+                  );
+                })
+              )}
+            </View>
+          )}
         </ScrollView>
       ) : (
         <ScrollView
