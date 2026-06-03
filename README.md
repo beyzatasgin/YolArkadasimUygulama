@@ -8,9 +8,9 @@ Yol Arkadaşım, kullanıcıların destinasyon seçerek tarih ve ilgi alanların
 
 ## 📱 Ekran Görüntüleri
 
-| Giriş | Seyahatlerim | Seyahat Oluştur | AI Plan |
-|-------|-------------|-----------------|---------|
-| Koyu tema, animasyonlu | Yaklaşan & geçmiş ayrımı | 6 adımlı akış | Günlük itinerary |
+| Giriş | Seyahatlerim | AI Chat | İstatistikler |
+|-------|-------------|---------|--------------|
+| Koyu tema, animasyonlu | Yaklaşan & geçmiş ayrımı | Seyahat asistanı | Grafik & metrikler |
 
 ---
 
@@ -21,6 +21,13 @@ Yol Arkadaşım, kullanıcıların destinasyon seçerek tarih ve ilgi alanların
 - **Google Gemini 2.0 Flash** yedek AI sağlayıcısı (OpenAI kota dolunca otomatik geçiş)
 - Kişi sayısı, ilgi alanları ve süreye göre kişiselleştirilmiş öneriler
 - Kişi başı **tahmini bütçe** hesaplama (₺)
+
+### 💬 AI Seyahat Asistanı
+- Seyahat hakkında **sohbet tabanlı** sorular sorma
+- Vize, para birimi, hava, ulaşım, kültür gibi konularda anlık yanıt
+- Seyahate özel bağlamsal sorular (destinasyon, tarih, ilgi alanları)
+- "Vize gerekiyor mu?", "Yerel yemekler neler?" gibi **hızlı soru chips'leri**
+- Mesaj geçmişi korunarak konuşma devam eder
 
 ### 🗺️ Destinasyon & Harita
 - **Google Places API (New)** ile otomatik tamamlamalı yer arama
@@ -44,6 +51,14 @@ Yol Arkadaşım, kullanıcıların destinasyon seçerek tarih ve ilgi alanların
 - Metin yorumu ekleme
 - Puanlar seyahat listesinde gösterilir
 
+### 📊 Seyahat İstatistikleri
+- Toplam seyahat, gün, destinasyon ve yolcu sayısı
+- **Son 6 ay** seyahat bar grafiği
+- En uzun seyahat ve en çok gidilen yer rekorları
+- **İlgi alanı dağılımı** (progress bar ile)
+- Ortalama değerlendirme puanı
+- Yaklaşan / geçmiş seyahat oranı
+
 ### 🌍 Keşfet
 - Dünya genelinde destinasyon arama
 - Popüler şehir hızlı erişim chips'leri
@@ -54,7 +69,7 @@ Yol Arkadaşım, kullanıcıların destinasyon seçerek tarih ve ilgi alanların
 - Firebase Authentication (E-posta/Şifre + Google)
 - Profil fotoğrafı yükleme (Firebase Storage)
 - Ad güncelleme, şifre değiştirme (accordion)
-- Seyahat istatistikleri (toplam & yaklaşan gezi sayısı)
+- Hızlı erişim: Seyahatlerim, İstatistikler, Kayıtlı Yerler, Gizlilik
 
 ### 📶 Çevrimdışı Destek
 - İnternet bağlantısı kesilince üst banner bildirimi
@@ -74,6 +89,7 @@ Yol Arkadaşım, kullanıcıların destinasyon seçerek tarih ve ilgi alanların
 | **Depolama** | Firebase Storage |
 | **Birincil AI** | OpenAI GPT-4o-mini |
 | **Yedek AI** | Google Gemini 2.0 Flash |
+| **AI Chat** | OpenAI / Gemini sohbet API |
 | **Yer Arama** | Google Places API (New) |
 | **Bildirim** | expo-notifications |
 | **Ağ İzleme** | @react-native-community/netinfo |
@@ -89,16 +105,18 @@ Yol Arkadaşım, kullanıcıların destinasyon seçerek tarih ve ilgi alanların
 │   ├── auth/               # Giriş, Kayıt, Şifre Sıfırlama
 │   ├── create-trip/        # 6 adımlı seyahat oluşturma akışı
 │   ├── trip-detail/        # Seyahat detay & düzenleme
+│   ├── ai-chat.tsx         # AI Seyahat Asistanı chat ekranı
+│   ├── statistics.tsx      # Seyahat istatistikleri
 │   ├── day-detail.tsx      # Günlük AI plan detayı
 │   └── saved-places.tsx    # Kaydedilen yerler
 │
-├── components/             # TripRating, TripMap, OfflineBanner, DatePickerModal...
-├── services/               # tripPlanService, notificationService, placesService
-├── functions/              # Firebase Cloud Functions (OpenAI / Gemini / Places proxy)
-├── context/                # CreateTripContext (seyahat oluşturma state'i)
+├── components/             # TripRating, TripMap, OfflineBanner...
+├── services/               # tripPlanService, chatService, notificationService, placesService
+├── functions/              # Firebase Cloud Functions (AI / Places proxy)
+├── context/                # CreateTripContext
 ├── hooks/                  # useCreateTrip, useNetworkStatus
 ├── utils/                  # imageHelper, firestore, router
-└── types/                  # TypeScript tip tanımları (trip, ai, privacy)
+└── types/                  # TypeScript tip tanımları
 ```
 
 ---
@@ -113,7 +131,7 @@ Yol Arkadaşım, kullanıcıların destinasyon seçerek tarih ve ilgi alanların
 ```bash
 git clone https://github.com/beyzatasgin/YolArkadasimUygulama.git
 cd YolArkadasimUygulama
-git checkout beyza
+git checkout beyzatasgin
 ```
 
 ### 2. Bağımlılıkları Yükle
@@ -165,13 +183,8 @@ npx expo start
 ### Firestore Güvenlik Kuralları
 Firebase Console → Firestore → Rules sekmesinden `firestore.rules` dosyasındaki kuralları yapıştırın.
 
-### Composite Index (Varsa)
-Uygulama hata logunda çıkan index linkine tıklayarak otomatik oluşturabilirsiniz. Manuel oluşturmak için:
-
-| Koleksiyon | Alan 1 | Alan 2 | Alan 3 |
-|-----------|--------|--------|--------|
-| `trips` | `userId` ↑ | `createdAt` ↓ | — |
-| `expenses` | `tripId` ↑ | `userId` ↑ | `createdAt` ↓ |
+### Composite Index
+Uygulama hata logunda çıkan index linkine tıklayarak otomatik oluşturabilirsiniz.
 
 ---
 
@@ -181,16 +194,21 @@ Uygulama hata logunda çıkan index linkine tıklayarak otomatik oluşturabilirs
 Giriş / Kayıt
       ↓
 Seyahatlerim (Ana Ekran)
+  ├── ✨ AI Asistan Chat
+  └── + Yeni Seyahat:
+        1. Destinasyon Ara
+        2. Tarih Seç
+        3. Tercihler (yolcu, ilgi alanları)
+        4. İncele
+        5. AI Plan Oluştur
+        6. Kaydet
       ↓
-+ Yeni Seyahat:
-  1. Destinasyon Ara   (Google Places autocomplete)
-  2. Tarih Seç         (başlangıç - bitiş, süre hesaplama)
-  3. Tercihler         (yolcu sayısı, ilgi alanları)
-  4. İncele            (özet kartı)
-  5. AI Plan Oluştur   (OpenAI/Gemini + Google Places)
-  6. Kaydet            (Firestore + bildirim zamanla)
+Seyahat Detayı
+  ├── Günlük Plan → Harita
+  ├── 💬 AI Asistan ile Sohbet Et
+  └── ⭐ Değerlendirme (geçmiş seyahatler)
       ↓
-Seyahat Detayı → Gün Detayı → Harita / Google Maps
+Profil → 📊 İstatistikler
 ```
 
 ---
@@ -218,11 +236,11 @@ Seyahat Detayı → Gün Detayı → Harita / Google Maps
 ## 🧪 Geliştirme Komutları
 
 ```bash
-npm run android      # Android emülatör / cihaz
-npm run ios          # iOS simülatör / cihaz
-npm run web          # Web tarayıcı
-npm run lint         # ESLint kontrolü
-npm run typecheck    # TypeScript tip kontrolü
+npm run android           # Android emülatör / cihaz
+npm run ios               # iOS simülatör / cihaz
+npm run web               # Web tarayıcı
+npm run lint              # ESLint kontrolü
+npm run typecheck         # TypeScript tip kontrolü
 npm run functions:serve   # Cloud Functions yerel emülatör
 npm run functions:deploy  # Cloud Functions deploy
 ```
