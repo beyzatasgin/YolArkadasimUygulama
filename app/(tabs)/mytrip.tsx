@@ -579,7 +579,7 @@ export default function Mytrip() {
         >
           <Ionicons name="add" size={26} color={INDIGO} />
         </TouchableOpacity>
-        </View> {/* Butonlar wrapper kapanışı */}
+        </View>
       </View>
 
       {loading ? (
