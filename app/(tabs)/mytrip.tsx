@@ -20,7 +20,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import StartNewTripCard from "../../components/MyTrips/StartNewTripCard";
 import { StarRow } from "../../components/TripRating";
 import { cancelTripNotifications } from "../../services/notificationService";
 import { getPlaceImageUrl } from "../../utils/imageHelper";
@@ -634,7 +633,6 @@ export default function Mytrip() {
               </Text>
             </TouchableOpacity>
           </View>
-          <StartNewTripCard />
         </ScrollView>
       ) : (
         <ScrollView
