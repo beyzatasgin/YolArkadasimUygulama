@@ -20,6 +20,8 @@ import { auth, db, firebaseInitError } from "../../configs/FirebaseConfig";
 import { getFirebaseAuthInitErrorMessage } from "../../configs/FirebaseMessages";
 import TripMap from "../../components/TripMap";
 import TripRating from "../../components/TripRating";
+import WeatherCard from "../../components/WeatherCard";
+import { useAttractionPins } from "../../hooks/useAttractionPins";
 import { cancelTripNotifications } from "../../services/notificationService";
 import { getPlaceImageUrl as getPlaceImage } from "../../utils/imageHelper";
 import { Colors } from "../../constants/Colors";
@@ -48,6 +50,19 @@ export default function TripDetailScreen() {
   const [editTripName, setEditTripName] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+
+  const centerLat = trip?.selectedPlace?.coordinates?.lat
+    ? Number(trip.selectedPlace.coordinates.lat)
+    : undefined;
+  const centerLon = trip?.selectedPlace?.coordinates?.lon
+    ? Number(trip.selectedPlace.coordinates.lon)
+    : undefined;
+
+  const { pins: attractionPins, loading: pinsLoading } = useAttractionPins(
+    trip?.aiPlan?.recommendations ?? null,
+    centerLat,
+    centerLon,
+  );
 
   const handleDeleteTrip = useCallback(async () => {
     Alert.alert(
@@ -554,7 +569,16 @@ export default function TripDetailScreen() {
                 <TripMap
                   coordinates={trip.selectedPlace.coordinates}
                   title={trip.selectedPlace.name}
+                  extraPins={attractionPins}
                 />
+                {pinsLoading && (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 }}>
+                    <ActivityIndicator size="small" color="#6366F1" />
+                    <Text style={{ fontFamily: "outfit", fontSize: 12, color: "#9CA3AF" }}>
+                      Yerler haritaya ekleniyor...
+                    </Text>
+                  </View>
+                )}
                 <TouchableOpacity
                   style={styles.mapButton}
                   onPress={openInMaps}
@@ -567,6 +591,22 @@ export default function TripDetailScreen() {
               </>
             )}
           </InfoCard>
+
+          {/* ── Hava Durumu ────────────────────────────────── */}
+          {trip.selectedPlace?.coordinates && (
+            <InfoCard
+              iconName="partly-sunny"
+              iconColor="#F59E0B"
+              iconBg="#FFFBEB"
+              title="Hava Durumu"
+            >
+              <WeatherCard
+                latitude={Number(trip.selectedPlace.coordinates.lat)}
+                longitude={Number(trip.selectedPlace.coordinates.lon)}
+                placeName={trip.selectedPlace.name}
+              />
+            </InfoCard>
+          )}
 
           {/* ── Tarih ve Süre ───────────────────────────────── */}
           <InfoCard

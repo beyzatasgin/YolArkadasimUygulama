@@ -29,11 +29,19 @@ Yol Arkadaşım, kullanıcıların destinasyon seçerek tarih ve ilgi alanların
 - "Vize gerekiyor mu?", "Yerel yemekler neler?" gibi **hızlı soru chips'leri**
 - Mesaj geçmişi korunarak konuşma devam eder
 
+### 🌤️ Hava Durumu
+- Destinasyonun **anlık hava durumu** ve **7 günlük tahmini** (seyahat detay sayfasında)
+- **Open-Meteo API** — ücretsiz, API key gerektirmez, koordinat tabanlı
+- Türkçe hava durumu açıklamaları ve rüzgar hızı
+- Günlük maks/min sıcaklık + WMO ikon gösterimi
+
 ### 🗺️ Destinasyon & Harita
 - **Google Places API (New)** ile otomatik tamamlamalı yer arama
 - Gerçek Google verileriyle konaklama, restoran ve gezilecek yer önerileri
 - Öneri kartlarından doğrudan **Google Maps** açma
 - İnteraktif harita görünümü (`react-native-maps`)
+- **Harita pinleri**: AI planındaki restoranlar, turistik yerler ve konaklama noktaları haritada farklı renk pinlerle gösterilir
+- **Nominatim (OpenStreetMap)** ile ücretsiz geocoding — pin'e tıklayınca yer adı balonu çıkar
 
 ### 📅 Seyahat Yönetimi
 - 6 adımlı sezgisel seyahat oluşturma akışı
@@ -94,6 +102,8 @@ Yol Arkadaşım, kullanıcıların destinasyon seçerek tarih ve ilgi alanların
 | **Bildirim** | expo-notifications |
 | **Ağ İzleme** | @react-native-community/netinfo |
 | **Harita** | react-native-maps |
+| **Hava Durumu** | Open-Meteo API (ücretsiz) |
+| **Geocoding** | Nominatim / OpenStreetMap (ücretsiz) |
 
 ---
 
@@ -110,11 +120,11 @@ Yol Arkadaşım, kullanıcıların destinasyon seçerek tarih ve ilgi alanların
 │   ├── day-detail.tsx      # Günlük AI plan detayı
 │   └── saved-places.tsx    # Kaydedilen yerler
 │
-├── components/             # TripRating, TripMap, OfflineBanner...
+├── components/             # TripRating, TripMap, WeatherCard, OfflineBanner...
 ├── services/               # tripPlanService, chatService, notificationService, placesService
 ├── functions/              # Firebase Cloud Functions (AI / Places proxy)
 ├── context/                # CreateTripContext
-├── hooks/                  # useCreateTrip, useNetworkStatus
+├── hooks/                  # useCreateTrip, useNetworkStatus, useAttractionPins
 ├── utils/                  # imageHelper, firestore, router
 └── types/                  # TypeScript tip tanımları
 ```
