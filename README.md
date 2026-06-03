@@ -1,0 +1,241 @@
+# ✈️ Yol Arkadaşım
+
+**Yapay Zeka Destekli Kişisel Seyahat Planlama Uygulaması**
+
+Yol Arkadaşım, kullanıcıların destinasyon seçerek tarih ve ilgi alanlarını belirlemesiyle yapay zeka aracılığıyla kişiselleştirilmiş günlük seyahat planları oluşturabildiği bir mobil uygulamadır. Bilgisayar Mühendisliği Bitirme Projesi kapsamında geliştirilmiştir.
+
+---
+
+## 📱 Ekran Görüntüleri
+
+| Giriş | Seyahatlerim | Seyahat Oluştur | AI Plan |
+|-------|-------------|-----------------|---------|
+| Koyu tema, animasyonlu | Yaklaşan & geçmiş ayrımı | 6 adımlı akış | Günlük itinerary |
+
+---
+
+## 🚀 Özellikler
+
+### 🤖 Yapay Zeka Entegrasyonu
+- **OpenAI GPT-4o-mini** ile ayrıntılı günlük seyahat planı oluşturma
+- **Google Gemini 2.0 Flash** yedek AI sağlayıcısı (OpenAI kota dolunca otomatik geçiş)
+- Kişi sayısı, ilgi alanları ve süreye göre kişiselleştirilmiş öneriler
+- Kişi başı **tahmini bütçe** hesaplama (₺)
+
+### 🗺️ Destinasyon & Harita
+- **Google Places API (New)** ile otomatik tamamlamalı yer arama
+- Gerçek Google verileriyle konaklama, restoran ve gezilecek yer önerileri
+- Öneri kartlarından doğrudan **Google Maps** açma
+- İnteraktif harita görünümü (`react-native-maps`)
+
+### 📅 Seyahat Yönetimi
+- 6 adımlı sezgisel seyahat oluşturma akışı
+- Yaklaşan / geçmiş seyahat ayrımı ve geri sayım
+- Seyahat adı ve notlarını düzenleme (in-place modal)
+- Seyahati **WhatsApp, e-posta ve mesaj** uygulamalarına paylaşma
+
+### 🔔 Akıllı Bildirimler
+- Seyahat başlamadan **1 gün önce** saat 09:00 hatırlatıcı
+- **Seyahat günü** sabah 08:00 hatırlatıcı
+- Seyahat silinince bildirimler otomatik iptal edilir
+
+### ⭐ Değerlendirme Sistemi
+- Geçmiş seyahatlere **1–5 yıldız** puanlama
+- Metin yorumu ekleme
+- Puanlar seyahat listesinde gösterilir
+
+### 🌍 Keşfet
+- Dünya genelinde destinasyon arama
+- Popüler şehir hızlı erişim chips'leri
+- Yerleri **favorilere ekleme / kaldırma** (toggle)
+- Kaydedilen Yerler sayfası
+
+### 👤 Kullanıcı Profili
+- Firebase Authentication (E-posta/Şifre + Google)
+- Profil fotoğrafı yükleme (Firebase Storage)
+- Ad güncelleme, şifre değiştirme (accordion)
+- Seyahat istatistikleri (toplam & yaklaşan gezi sayısı)
+
+### 📶 Çevrimdışı Destek
+- İnternet bağlantısı kesilince üst banner bildirimi
+- Bağlantı geri gelince otomatik yeşil banner
+
+---
+
+## 🛠️ Teknoloji Yığını
+
+| Katman | Teknoloji |
+|--------|-----------|
+| **Mobil Frontend** | React Native 0.81 + Expo 54 (TypeScript) |
+| **Navigasyon** | Expo Router 6 (dosya tabanlı) |
+| **Backend** | Firebase Cloud Functions (Node.js 20) |
+| **Veritabanı** | Firebase Firestore |
+| **Auth** | Firebase Authentication |
+| **Depolama** | Firebase Storage |
+| **Birincil AI** | OpenAI GPT-4o-mini |
+| **Yedek AI** | Google Gemini 2.0 Flash |
+| **Yer Arama** | Google Places API (New) |
+| **Bildirim** | expo-notifications |
+| **Ağ İzleme** | @react-native-community/netinfo |
+| **Harita** | react-native-maps |
+
+---
+
+## 📂 Proje Yapısı
+
+```
+├── app/
+│   ├── (tabs)/             # Ana sekmeler (Seyahatlerim, Keşfet, Profil)
+│   ├── auth/               # Giriş, Kayıt, Şifre Sıfırlama
+│   ├── create-trip/        # 6 adımlı seyahat oluşturma akışı
+│   ├── trip-detail/        # Seyahat detay & düzenleme
+│   ├── day-detail.tsx      # Günlük AI plan detayı
+│   └── saved-places.tsx    # Kaydedilen yerler
+│
+├── components/             # TripRating, TripMap, OfflineBanner, DatePickerModal...
+├── services/               # tripPlanService, notificationService, placesService
+├── functions/              # Firebase Cloud Functions (OpenAI / Gemini / Places proxy)
+├── context/                # CreateTripContext (seyahat oluşturma state'i)
+├── hooks/                  # useCreateTrip, useNetworkStatus
+├── utils/                  # imageHelper, firestore, router
+└── types/                  # TypeScript tip tanımları (trip, ai, privacy)
+```
+
+---
+
+## ⚙️ Kurulum
+
+### Gereksinimler
+- Node.js 18+
+- Expo Go (mobil test için) veya Android/iOS Simulator
+
+### 1. Repoyu Klonla
+```bash
+git clone https://github.com/beyzatasgin/YolArkadasimUygulama.git
+cd YolArkadasimUygulama
+git checkout beyza
+```
+
+### 2. Bağımlılıkları Yükle
+```bash
+npm install
+npx expo install expo-notifications @react-native-community/netinfo
+```
+
+### 3. Ortam Değişkenlerini Ayarla
+`.env.example` dosyasını kopyalayın:
+```bash
+cp .env.example .env
+```
+
+`.env` içini doldurun:
+```env
+EXPO_PUBLIC_FIREBASE_API_KEY=...
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=...
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=...
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=...
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+EXPO_PUBLIC_FIREBASE_APP_ID=...
+
+EXPO_PUBLIC_OPENAI_API_KEY=...
+EXPO_PUBLIC_GEMINI_API_KEY=...
+EXPO_PUBLIC_GOOGLE_PLACES_API_KEY=...
+
+EXPO_PUBLIC_USE_API_PROXY=false
+EXPO_PUBLIC_AI_PROVIDER=auto
+```
+
+### 4. Firebase Cloud Functions (Backend)
+```bash
+cd functions
+cp .env.example .env   # API anahtarlarını girin
+npm install
+npm run build
+```
+
+### 5. Uygulamayı Başlat
+```bash
+npx expo start
+```
+
+---
+
+## 🔥 Firebase Yapılandırması
+
+### Firestore Güvenlik Kuralları
+Firebase Console → Firestore → Rules sekmesinden `firestore.rules` dosyasındaki kuralları yapıştırın.
+
+### Composite Index (Varsa)
+Uygulama hata logunda çıkan index linkine tıklayarak otomatik oluşturabilirsiniz. Manuel oluşturmak için:
+
+| Koleksiyon | Alan 1 | Alan 2 | Alan 3 |
+|-----------|--------|--------|--------|
+| `trips` | `userId` ↑ | `createdAt` ↓ | — |
+| `expenses` | `tripId` ↑ | `userId` ↑ | `createdAt` ↓ |
+
+---
+
+## 🔄 Uygulama Akışı
+
+```
+Giriş / Kayıt
+      ↓
+Seyahatlerim (Ana Ekran)
+      ↓
++ Yeni Seyahat:
+  1. Destinasyon Ara   (Google Places autocomplete)
+  2. Tarih Seç         (başlangıç - bitiş, süre hesaplama)
+  3. Tercihler         (yolcu sayısı, ilgi alanları)
+  4. İncele            (özet kartı)
+  5. AI Plan Oluştur   (OpenAI/Gemini + Google Places)
+  6. Kaydet            (Firestore + bildirim zamanla)
+      ↓
+Seyahat Detayı → Gün Detayı → Harita / Google Maps
+```
+
+---
+
+## 🤖 AI Sağlayıcı Seçimi
+
+`EXPO_PUBLIC_AI_PROVIDER` değerleri:
+
+| Değer | Davranış |
+|-------|---------|
+| `openai` | Yalnızca OpenAI GPT-4o-mini |
+| `gemini` | Yalnızca Google Gemini 2.0 Flash |
+| `auto` | Önce OpenAI, hata/kota aşımında Gemini (varsayılan) |
+
+---
+
+## 🔒 Güvenlik
+
+- `EXPO_PUBLIC_USE_API_PROXY=true` ayarıyla tüm AI ve Places çağrıları Cloud Functions üzerinden yapılır; API anahtarları istemcide görünmez
+- Firestore kuralları her kullanıcının yalnızca kendi verisine erişmesini sağlar
+- `.env` dosyası asla repoya commit edilmemelidir
+
+---
+
+## 🧪 Geliştirme Komutları
+
+```bash
+npm run android      # Android emülatör / cihaz
+npm run ios          # iOS simülatör / cihaz
+npm run web          # Web tarayıcı
+npm run lint         # ESLint kontrolü
+npm run typecheck    # TypeScript tip kontrolü
+npm run functions:serve   # Cloud Functions yerel emülatör
+npm run functions:deploy  # Cloud Functions deploy
+```
+
+---
+
+## 👩‍💻 Geliştirici
+
+**Beyza Taşgın**
+Bilgisayar Mühendisliği — Bitirme Projesi 2025
+
+---
+
+## 📄 Lisans
+
+Bu proje akademik amaçlı geliştirilmiştir.
