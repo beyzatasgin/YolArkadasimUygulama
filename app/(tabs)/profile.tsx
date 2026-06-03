@@ -54,6 +54,13 @@ const quickActions = [
     target: "/mytrip",
   },
   {
+    icon: "bar-chart",
+    label: "İstatistikler",
+    color: "#10B981",
+    bg: "#ECFDF5",
+    target: "/statistics",
+  },
+  {
     icon: "heart",
     label: "Kayıtlı Yerler",
     color: "#EC4899",
@@ -333,12 +340,16 @@ export default function Profile() {
       >
         {/* ── HIZLI ERİŞİM ── */}
         <Text style={styles.sectionTitle}>Hızlı Erişim</Text>
-        <View style={styles.quickGrid}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={[styles.quickGrid, { paddingHorizontal: 20 }]}
+        >
           {quickActions.map((item) => (
             <TouchableOpacity
               key={item.label}
               onPress={() => router.push(item.target as any)}
-              style={[styles.quickCard, { backgroundColor: item.bg }]}
+              style={[styles.quickCard, { backgroundColor: item.bg, width: 90 }]}
               activeOpacity={0.8}
             >
               <View style={[styles.quickIcon, { backgroundColor: item.color }]}>
@@ -349,7 +360,7 @@ export default function Profile() {
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
 
         {/* ── YAKLAŞAN SEYAHATLER ── */}
         {upcomingTrips.length > 0 && (
@@ -666,7 +677,6 @@ const styles = StyleSheet.create({
   /* Quick Grid */
   quickGrid: {
     flexDirection: "row",
-    marginHorizontal: 20,
     gap: 12,
   },
   quickCard: {
