@@ -538,6 +538,28 @@ export default function Mytrip() {
           </Text>
         </View>
 
+        {/* Butonlar */}
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          {/* AI Chat Butonu */}
+          <TouchableOpacity
+            onPress={() => router.push("/ai-chat")}
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: 23,
+              backgroundColor: INDIGO,
+              justifyContent: "center",
+              alignItems: "center",
+              shadowColor: INDIGO,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.4,
+              shadowRadius: 6,
+              elevation: 4,
+            }}
+          >
+            <Ionicons name="sparkles" size={22} color="#fff" />
+          </TouchableOpacity>
+
         {/* White circle + button */}
         <TouchableOpacity
           onPress={handleStartNewTrip}
@@ -557,6 +579,7 @@ export default function Mytrip() {
         >
           <Ionicons name="add" size={26} color={INDIGO} />
         </TouchableOpacity>
+        </View> {/* Butonlar wrapper kapanışı */}
       </View>
 
       {loading ? (

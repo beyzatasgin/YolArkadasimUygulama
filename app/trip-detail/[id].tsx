@@ -809,6 +809,44 @@ export default function TripDetailScreen() {
             </InfoCard>
           )}
 
+          {/* ── AI Asistan Butonu ── */}
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: "/ai-chat",
+                params: {
+                  placeName: trip.selectedPlace?.name || "",
+                  startDate: trip.startDate ? new Date(trip.startDate).toLocaleDateString("tr-TR") : "",
+                  endDate: trip.endDate ? new Date(trip.endDate).toLocaleDateString("tr-TR") : "",
+                  duration: String(trip.duration || ""),
+                  travelers: String(trip.travelers || 1),
+                  interests: JSON.stringify(trip.interests || []),
+                },
+              })
+            }
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+              marginHorizontal: 20,
+              marginBottom: 16,
+              paddingVertical: 14,
+              borderRadius: 16,
+              backgroundColor: ACCENT,
+              shadowColor: ACCENT,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 5,
+            }}
+          >
+            <Ionicons name="sparkles" size={20} color="#fff" />
+            <Text style={{ fontFamily: "outfit-bold", fontSize: 15, color: "#fff" }}>
+              AI Asistan ile Sohbet Et
+            </Text>
+          </TouchableOpacity>
+
           {/* ── Footer ──────────────────────────────────────── */}
           <View style={styles.footerRow}>
             <Ionicons name="time-outline" size={14} color={TEXT_MUTED} />
