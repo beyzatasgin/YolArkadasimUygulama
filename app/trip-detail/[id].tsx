@@ -21,6 +21,7 @@ import { getFirebaseAuthInitErrorMessage } from "../../configs/FirebaseMessages"
 import TripMap from "../../components/TripMap";
 import TripRating from "../../components/TripRating";
 import WeatherCard from "../../components/WeatherCard";
+import PackingChecklist from "../../components/PackingChecklist";
 import { useAttractionPins } from "../../hooks/useAttractionPins";
 import { cancelTripNotifications } from "../../services/notificationService";
 import { getPlaceImageUrl as getPlaceImage } from "../../utils/imageHelper";
@@ -845,6 +846,22 @@ export default function TripDetailScreen() {
                 onSaved={(r, rev) =>
                   setTrip((prev) => ({ ...prev, rating: r, review: rev }))
                 }
+              />
+            </InfoCard>
+          )}
+
+          {/* ── Eşya Listesi ──────────────────────────────── */}
+          {trip.aiPlan?.packingList && trip.aiPlan.packingList.length > 0 && (
+            <InfoCard
+              iconName="bag"
+              iconColor="#8B5CF6"
+              iconBg="#F5F3FF"
+              title="Eşya Listesi"
+            >
+              <PackingChecklist
+                tripId={trip.id}
+                packingList={trip.aiPlan.packingList}
+                initialChecked={trip.packingChecked ?? {}}
               />
             </InfoCard>
           )}

@@ -22,10 +22,16 @@ export type AIRecommendations = {
   tips?: string[];
 };
 
+export type PackingCategory = {
+  category: string;
+  items: string[];
+};
+
 export type AIPlan = {
   itinerary: DayItinerary[];
   recommendations: AIRecommendations;
   estimatedCost?: number | null;
+  packingList?: PackingCategory[];
 };
 
 export type AIProvider = "openai" | "gemini" | "auto";

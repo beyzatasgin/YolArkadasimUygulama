@@ -175,7 +175,14 @@ Lütfen aşağıdaki JSON formatında bir seyahat planı oluştur:
     "attractions": [{"name": "Görülecek yer 1", "rating": 4.6, "address": "Adres bilgisi", "url": "Google Maps linki", "photoUrl": "Fotoğraf URL"}],
     "tips": ["İpucu 1", "İpucu 2", "İpucu 3"]
   },
-  "estimatedCost": 5000
+  "estimatedCost": 5000,
+  "packingList": [
+    {"category": "Belgeler", "items": ["Pasaport", "Vize (gerekiyorsa)", "Uçak bileti / rezervasyon"]},
+    {"category": "Giysi", "items": ["T-shirt (3 adet)", "Yürüyüş ayakkabısı"]},
+    {"category": "Sağlık & Hijyen", "items": ["Güneş kremi", "Ağrı kesici"]},
+    {"category": "Elektronik", "items": ["Şarj aleti", "Evrensel adaptör"]},
+    {"category": "Diğer", "items": ["Su matarası", "Seyahat sigortası"]}
+  ]
 }
 
 Kurallar:
@@ -183,7 +190,8 @@ Kurallar:
 - Eğer Google Places verisi verildiyse, recommendations alanlarında bu listedeki gerçek mekan adlarını kullan.
 - activities içinde de mümkün olduğunca gerçek mekan isimleri kullan.
 - İlgi alanlarına uygun aktiviteler öner.
-- estimatedCost alanına kişi başı toplam tahmini harcamayı Türk Lirası (₺) cinsinden sayısal olarak yaz (örn: 8500). Konaklama, yemek ve ulaşım dahil kaba bir tahmin yap.`;
+- estimatedCost alanına kişi başı toplam tahmini harcamayı Türk Lirası (₺) cinsinden sayısal olarak yaz (örn: 8500). Konaklama, yemek ve ulaşım dahil kaba bir tahmin yap.
+- packingList için destinasyon iklimine, süreye ve ilgi alanlarına göre kişiselleştirilmiş eşya listesi oluştur. Her kategoride 3-6 madde olsun. Türkçe yaz.`;
 };
 
 export const parseAIResponse = (responseText: string): AIPlan => {
