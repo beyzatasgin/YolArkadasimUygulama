@@ -5,6 +5,8 @@ import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -15,92 +17,147 @@ import {
 import { auth, db, firebaseInitError } from "./../../../configs/FirebaseConfig";
 import { getFirebaseAuthInitErrorMessage } from "./../../../configs/FirebaseMessages";
 import { Colors } from "./../../../constants/Colors";
+
+const AUTH_TIMEOUT_MS = 25000;
+
+const withTimeout = (promise, ms, timeoutMessage) =>
+  Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(timeoutMessage)), ms);
+    }),
+  ]);
+
+const getSignUpErrorMessage = (error) => {
+  const code = error?.code || "";
+  if (code === "auth/email-already-in-use") {
+    return "Bu e-posta zaten kayıtlı. Giriş yapmayı deneyin.";
+  }
+  if (code === "auth/invalid-email") {
+    return "Geçersiz e-posta adresi.";
+  }
+  if (code === "auth/weak-password") {
+    return "Şifre en az 6 karakter olmalıdır.";
+  }
+  if (code === "auth/network-request-failed") {
+    return "İnternet bağlantısı hatası. Tekrar deneyin.";
+  }
+  if (code === "auth/operation-not-allowed") {
+    return "E-posta ile kayıt Firebase'de kapalı. Console ayarlarını kontrol edin.";
+  }
+  if (error?.message?.includes("zaman aşımı")) {
+    return error.message;
+  }
+  return error?.message || "Hesap oluşturulamadı. Lütfen tekrar deneyin.";
+};
+
+const showFeedback = (message) => {
+  if (Platform.OS === "android") {
+    ToastAndroid.show(message, ToastAndroid.LONG);
+    return;
+  }
+  Alert.alert("Kayıt", message);
+};
+
 export default function SignUp() {
   const navigation = useNavigation();
   const router = useRouter();
-  const [email, setEmail] = useState();
-  const [password, setPassword] = useState();
-  const [fullName, setFullName] = useState();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+
   useEffect(() => {
     navigation.setOptions({
       headerShown: false,
     });
   }, [navigation]);
 
-  const OnCreateAccount = () => {
-    // Çift tıklama / tekrar tetiklenme koruması
+  const saveUserProfile = async (user, trimmedEmail, trimmedFullName) => {
+    if (!db || !user?.uid) return;
+
+    await setDoc(
+      doc(db, "userProfiles", user.uid),
+      {
+        uid: user.uid,
+        displayName: trimmedFullName || "Kullanıcı",
+        displayNameLower: (trimmedFullName || "Kullanıcı").toLowerCase(),
+        email: trimmedEmail,
+        searchableEmail: trimmedEmail,
+        photoURL: null,
+        isOnline: true,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        lastSeen: serverTimestamp(),
+      },
+      { merge: true },
+    );
+  };
+
+  const onCreateAccount = async () => {
     if (isCreatingAccount) {
       return;
     }
 
     if (!auth) {
-      const initMessage = getFirebaseAuthInitErrorMessage(firebaseInitError);
-      ToastAndroid.show(initMessage, ToastAndroid.LONG);
+      showFeedback(getFirebaseAuthInitErrorMessage(firebaseInitError));
       return;
     }
 
-    const trimmedEmail = email?.trim().toLowerCase();
-    const trimmedPassword = password?.trim();
-    const trimmedFullName = fullName?.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedPassword = password;
+    const trimmedFullName = fullName.trim();
 
     if (!trimmedEmail || !trimmedPassword || !trimmedFullName) {
-      ToastAndroid.show("Lütfen tüm bilgileri girin", ToastAndroid.LONG);
+      showFeedback("Lütfen ad soyad, e-posta ve şifre alanlarını doldurun.");
+      return;
+    }
+
+    if (trimmedPassword.length < 6) {
+      showFeedback("Şifre en az 6 karakter olmalıdır.");
       return;
     }
 
     setIsCreatingAccount(true);
-    createUserWithEmailAndPassword(auth, trimmedEmail, trimmedPassword)
-      .then(async (userCredential) => {
-        // Signed up
-        const user = userCredential.user;
 
-        // Kullanıcı adını ayarla (fotoğraf boş kalacak)
-        if (fullName) {
-          try {
-            await updateProfile(user, {
-              displayName: trimmedFullName,
-              // photoURL eklemiyoruz, böylece boş kalacak
-            });
-          } catch (error) {
-            console.error("Profil güncelleme hatası:", error);
-          }
-        }
+    try {
+      const userCredential = await withTimeout(
+        createUserWithEmailAndPassword(auth, trimmedEmail, trimmedPassword),
+        AUTH_TIMEOUT_MS,
+        "Kayıt işlemi zaman aşımına uğradı. İnternet bağlantınızı kontrol edin.",
+      );
 
-        // Sosyal arama için profil dokümanını kesin oluştur
-        if (db) {
-          await setDoc(
-            doc(db, "userProfiles", user.uid),
-            {
-              uid: user.uid,
-              displayName: trimmedFullName || "Kullanıcı",
-              displayNameLower: (trimmedFullName || "Kullanıcı").toLowerCase(),
-              email: trimmedEmail,
-              searchableEmail: trimmedEmail,
-              photoURL: null,
-              isOnline: true,
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-              lastSeen: serverTimestamp(),
-            },
-            { merge: true },
-          );
-        }
+      const user = userCredential.user;
 
-        router.replace("/mytrip");
-        console.log(user);
-        // ...
-      })
-      .catch((error) => {
-        const errorCode = error.code;
-        const errorMessage = error.message;
-        console.log(errorMessage, errorCode);
-        // ..
-      })
-      .finally(() => {
-        setIsCreatingAccount(false);
-      });
+      try {
+        await updateProfile(user, {
+          displayName: trimmedFullName,
+        });
+      } catch (profileError) {
+        console.warn("Profil adı güncellenemedi:", profileError?.message);
+      }
+
+      try {
+        await withTimeout(
+          saveUserProfile(user, trimmedEmail, trimmedFullName),
+          10000,
+          "Profil kaydı zaman aşımına uğradı.",
+        );
+      } catch (profileSaveError) {
+        console.warn(
+          "userProfiles kaydı atlandı:",
+          profileSaveError?.message || profileSaveError,
+        );
+      }
+
+      router.replace("/(tabs)/mytrip");
+    } catch (error) {
+      console.log("Sign up error:", error?.code, error?.message);
+      showFeedback(getSignUpErrorMessage(error));
+    } finally {
+      setIsCreatingAccount(false);
+    }
   };
 
   return (
@@ -124,7 +181,6 @@ export default function SignUp() {
       >
         Yeni Hesap Oluştur
       </Text>
-      {/* User Full Name*/}
       <View
         style={{
           marginTop: 50,
@@ -135,17 +191,17 @@ export default function SignUp() {
             fontFamily: "outfit",
           }}
         >
-          {" "}
-          Ad Soyad{" "}
+          Ad Soyad
         </Text>
         <TextInput
           style={styles.input}
           placeholder="Ad ve soyadınızı girin"
-          onChangeText={(value) => setFullName(value)}
+          value={fullName}
+          onChangeText={setFullName}
+          autoCapitalize="words"
         />
       </View>
 
-      {/* Email*/}
       <View
         style={{
           marginTop: 20,
@@ -156,19 +212,18 @@ export default function SignUp() {
             fontFamily: "outfit",
           }}
         >
-          {" "}
-          E-posta{" "}
+          E-posta
         </Text>
         <TextInput
           style={styles.input}
-          onChangeText={(value) => setEmail(value)}
+          value={email}
+          onChangeText={setEmail}
           placeholder="E-posta adresinizi girin"
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
         />
       </View>
-      {/* Password*/}
       <View
         style={{
           marginTop: 20,
@@ -179,15 +234,17 @@ export default function SignUp() {
             fontFamily: "outfit",
           }}
         >
-          {" "}
-          Şifre{" "}
+          Şifre
         </Text>
         <View style={styles.passwordWrapper}>
           <TextInput
             secureTextEntry={!showPassword}
             style={[styles.input, styles.passwordInput]}
-            onChangeText={(value) => setPassword(value)}
-            placeholder="Şifrenizi girin"
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Şifrenizi girin (en az 6 karakter)"
+            autoCapitalize="none"
+            autoCorrect={false}
           />
           <TouchableOpacity
             onPress={() => setShowPassword((prev) => !prev)}
@@ -202,9 +259,8 @@ export default function SignUp() {
         </View>
       </View>
 
-      {/*Create Account Button*/}
       <TouchableOpacity
-        onPress={OnCreateAccount}
+        onPress={onCreateAccount}
         disabled={isCreatingAccount}
         style={{
           padding: 15,
@@ -231,9 +287,9 @@ export default function SignUp() {
         )}
       </TouchableOpacity>
 
-      {/*Sign In Button*/}
       <TouchableOpacity
-        onPress={() => router.replace("auth/sign-in")}
+        onPress={() => router.replace("/auth/sign-in")}
+        disabled={isCreatingAccount}
         style={{
           padding: 15,
           backgroundColor: Colors.WHITE,
