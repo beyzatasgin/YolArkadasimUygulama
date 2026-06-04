@@ -290,14 +290,7 @@ export default function Profile() {
 
         <View style={styles.headerContent}>
           {/* Avatar */}
-          <TouchableOpacity
-            onPress={() => {
-              setEditName(fullName);
-              setEditModalVisible(true);
-            }}
-            style={styles.avatarWrapper}
-            activeOpacity={0.85}
-          >
+          <View style={styles.avatarWrapper}>
             {photoUri ? (
               <Image source={{ uri: photoUri }} style={styles.avatar} />
             ) : (
@@ -305,10 +298,7 @@ export default function Profile() {
                 <Text style={styles.avatarInitials}>{initials}</Text>
               </View>
             )}
-            <View style={styles.editBadge}>
-              <Ionicons name="camera" size={12} color="#fff" />
-            </View>
-          </TouchableOpacity>
+          </View>
 
           {/* İsim & E-posta */}
           <Text style={styles.headerName}>
@@ -397,6 +387,20 @@ export default function Profile() {
 
         {/* ── HESAP ── */}
         <Text style={styles.sectionTitle}>Hesap</Text>
+        <TouchableOpacity
+          onPress={() => { setEditName(fullName); setEditModalVisible(true); }}
+          style={styles.menuRow}
+          activeOpacity={0.8}
+        >
+          <View style={[styles.menuIcon, { backgroundColor: "#EEF2FF" }]}>
+            <Ionicons name="person-outline" size={18} color={ACCENT} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.menuTitle}>Profili Düzenle</Text>
+            <Text style={styles.menuSub}>Ad ve profil fotoğrafı</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#D1D5DB" />
+        </TouchableOpacity>
 
         {/* ── ŞİFRE DEĞİŞTİR (Accordion) ── */}
         <TouchableOpacity
