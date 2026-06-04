@@ -620,15 +620,17 @@ export default function TripDetailScreen() {
             <Ionicons name="arrow-back" size={20} color="#fff" />
           </TouchableOpacity>
 
-          {!isReadOnly && (
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <TouchableOpacity
-                onPress={handleEditTrip}
-                style={styles.headerIconBtn}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="create-outline" size={20} color="#fff" />
-              </TouchableOpacity>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {/* Düzenle — hem sahibi hem paylaşılan görebilir */}
+            <TouchableOpacity
+              onPress={handleEditTrip}
+              style={styles.headerIconBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="create-outline" size={20} color="#fff" />
+            </TouchableOpacity>
+            {/* Sil — sadece sahibi */}
+            {!isReadOnly && (
               <TouchableOpacity
                 onPress={handleDeleteTrip}
                 style={[styles.headerIconBtn, { backgroundColor: "rgba(239,68,68,0.75)" }]}
@@ -636,13 +638,8 @@ export default function TripDetailScreen() {
               >
                 <Ionicons name="trash-outline" size={20} color="#fff" />
               </TouchableOpacity>
-            </View>
-          )}
-          {isReadOnly && (
-            <View style={[styles.headerIconBtn, { backgroundColor: "rgba(255,255,255,0.15)" }]}>
-              <Ionicons name="eye-outline" size={20} color="#fff" />
-            </View>
-          )}
+            )}
+          </View>
         </View>
 
         <View style={styles.bodyWrapper}>
@@ -1063,7 +1060,7 @@ export default function TripDetailScreen() {
           )}
 
           {/* ── Alternatif Plan ──────────────────────────── */}
-          {trip.aiPlan && !isReadOnly && (
+          {trip.aiPlan && (
             <InfoCard
               iconName="refresh-circle"
               iconColor="#F59E0B"

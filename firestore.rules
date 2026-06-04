@@ -20,9 +20,18 @@ service cloud.firestore {
               && request.auth.token.email in data.sharedWith);
     }
 
+    function canWriteTrip(data) {
+      return isOwner(data.userId)
+          || (request.auth != null
+              && request.auth.token.email != null
+              && data.sharedWith != null
+              && data.sharedWith is list
+              && request.auth.token.email in data.sharedWith);
+    }
+
     match /trips/{tripId} {
       allow read:   if canReadTrip(resource.data);
-      allow write:  if isOwner(resource.data.userId);
+      allow write:  if canWriteTrip(resource.data);
       allow create: if isOwner(request.resource.data.userId);
     }
 
