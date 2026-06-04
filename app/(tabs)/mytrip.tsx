@@ -1151,7 +1151,7 @@ export default function Mytrip() {
               {sharedTrips.map((trip) => (
                 <TouchableOpacity
                   key={trip.id}
-                  onPress={() => router.push(`/shared/${trip.id}`)}
+                  onPress={() => router.push(`/trip-detail/${trip.id}`)}
                   style={{
                     backgroundColor: "#fff",
                     borderRadius: 16,
