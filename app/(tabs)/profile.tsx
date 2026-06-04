@@ -348,63 +348,6 @@ export default function Profile() {
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── MENÜ ── */}
-        <Text style={styles.sectionTitle}>Menü</Text>
-        <View style={styles.menuCard}>
-          {menuActions.map((item, index) => (
-            <View key={item.label}>
-              {index > 0 && <View style={styles.menuDivider} />}
-              <TouchableOpacity
-                onPress={() => router.push(item.target as any)}
-                style={styles.menuRow}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.menuIcon, { backgroundColor: item.bg }]}>
-                  <Ionicons name={item.icon as any} size={18} color={item.color} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.menuTitle}>{item.label}</Text>
-                  <Text style={styles.menuSub}>{item.sub}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color="#D1D5DB" />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-
-        {/* ── YAKLAŞAN SEYAHATLER ── */}
-        {upcomingTrips.length > 0 && (
-          <>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Yaklaşan Seyahatler</Text>
-              <TouchableOpacity onPress={() => router.push("/(tabs)/mytrip")}>
-                <Text style={styles.seeAll}>Tümü →</Text>
-              </TouchableOpacity>
-            </View>
-            {upcomingTrips.map((trip) => (
-              <TouchableOpacity
-                key={trip.id}
-                onPress={() => router.push(`/trip-detail/${trip.id}` as any)}
-                style={styles.tripCard}
-                activeOpacity={0.8}
-              >
-                <View style={styles.tripCardLeft}>
-                  <Text style={styles.tripName} numberOfLines={1}>
-                    {trip.tripName || trip.selectedPlace?.name}
-                  </Text>
-                  <View style={styles.tripMeta}>
-                    <Ionicons name="location-outline" size={13} color="#9CA3AF" />
-                    <Text style={styles.tripMetaText}>{trip.selectedPlace?.name}</Text>
-                  </View>
-                </View>
-                <View style={styles.tripDateBadge}>
-                  <Text style={styles.tripDateText}>{formatDate(trip.startDate)}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </>
-        )}
-
         {/* ── HESAP ── */}
         <Text style={styles.sectionTitle}>Hesap</Text>
         <TouchableOpacity
@@ -500,6 +443,30 @@ export default function Profile() {
             </TouchableOpacity>
           </View>
         </Animated.View>
+
+        {/* ── MENÜ ── */}
+        <Text style={styles.sectionTitle}>Menü</Text>
+        <View style={styles.menuCard}>
+          {menuActions.map((item, index) => (
+            <View key={item.label}>
+              {index > 0 && <View style={styles.menuDivider} />}
+              <TouchableOpacity
+                onPress={() => router.push(item.target as any)}
+                style={styles.menuRow}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.menuIcon, { backgroundColor: item.bg }]}>
+                  <Ionicons name={item.icon as any} size={18} color={item.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.menuTitle}>{item.label}</Text>
+                  <Text style={styles.menuSub}>{item.sub}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#D1D5DB" />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
 
         {/* ── ÇIKIŞ ── */}
         <TouchableOpacity
