@@ -200,7 +200,7 @@ export default function Profile() {
 
     // expo-file-system ile base64 oku — Expo Go dahil tüm ortamlarda çalışır
     const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
+      encoding: "base64" as any,
     });
 
     const photoRef = ref(storage, `profile-photos/${auth.currentUser.uid}/${Date.now()}.jpg`);
