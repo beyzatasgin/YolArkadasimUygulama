@@ -249,49 +249,8 @@ export default function TripDetailScreen() {
   }, [editNotes, editTripName, id]);
 
   useEffect(() => {
-    navigation.setOptions({
-      headerShown: true,
-      headerTransparent: true,
-      headerTitle: "",
-      headerLeft: () => (
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 18,
-            backgroundColor: "rgba(10,15,30,0.55)",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Ionicons name="arrow-back" size={20} color="#fff" />
-        </TouchableOpacity>
-      ),
-      headerRight: () => (
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          <TouchableOpacity
-            onPress={handleShareTrip}
-            style={styles.headerIconBtn}
-          >
-            <Ionicons name="share-social-outline" size={20} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleEditTrip}
-            style={styles.headerIconBtn}
-          >
-            <Ionicons name="create-outline" size={20} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleDeleteTrip}
-            style={[styles.headerIconBtn, { backgroundColor: "rgba(239,68,68,0.75)" }]}
-          >
-            <Ionicons name="trash-outline" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      ),
-    });
-  }, [navigation, router, handleDeleteTrip, handleEditTrip, handleShareTrip]);
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
 
   const getFallbackImageUrl = useCallback(
     (placeName?: string | null) => getPlaceImage(placeName),
@@ -459,7 +418,7 @@ export default function TripDetailScreen() {
     getFallbackImageUrl(trip?.selectedPlace?.name);
 
   return (
-    <>
+    <View style={{ flex: 1, backgroundColor: BODY_BG }}>
       {/* Edit Modal — kept exactly as-is, just minor style refresh */}
       <Modal
         visible={editModalVisible}
@@ -590,6 +549,34 @@ export default function TripDetailScreen() {
             resizeMode="cover"
           />
         )}
+
+        {/* ── Custom Floating Header ───────────────────────── */}
+        <View style={styles.floatingHeader} pointerEvents="box-none">
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.headerIconBtn}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="arrow-back" size={20} color="#fff" />
+          </TouchableOpacity>
+
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <TouchableOpacity
+              onPress={handleEditTrip}
+              style={styles.headerIconBtn}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="create-outline" size={20} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleDeleteTrip}
+              style={[styles.headerIconBtn, { backgroundColor: "rgba(239,68,68,0.75)" }]}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="trash-outline" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </View>
 
         <View style={styles.bodyWrapper}>
           {/* ── Trip Name + Status ──────────────────────────── */}
@@ -1073,7 +1060,7 @@ export default function TripDetailScreen() {
           </View>
         </View>
       </ScrollView>
-    </>
+    </View>
   );
 }
 
@@ -1231,11 +1218,24 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 15,
   },
+  floatingHeader: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 52,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
+  },
   headerIconBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(10,15,30,0.55)",
+    backgroundColor: "rgba(10,15,30,0.60)",
     alignItems: "center",
     justifyContent: "center",
   },
