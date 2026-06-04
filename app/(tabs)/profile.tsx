@@ -395,22 +395,8 @@ export default function Profile() {
           </>
         )}
 
-        {/* ── PROFİLİ DÜZENLE ── */}
+        {/* ── HESAP ── */}
         <Text style={styles.sectionTitle}>Hesap</Text>
-        <TouchableOpacity
-          onPress={() => { setEditName(fullName); setEditModalVisible(true); }}
-          style={styles.menuRow}
-          activeOpacity={0.8}
-        >
-          <View style={[styles.menuIcon, { backgroundColor: "#EEF2FF" }]}>
-            <Ionicons name="person-outline" size={18} color={ACCENT} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.menuTitle}>Profili Düzenle</Text>
-            <Text style={styles.menuSub}>Ad ve profil fotoğrafı</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color="#D1D5DB" />
-        </TouchableOpacity>
 
         {/* ── ŞİFRE DEĞİŞTİR (Accordion) ── */}
         <TouchableOpacity
