@@ -164,7 +164,12 @@ Lütfen aşağıdaki JSON formatında bir seyahat planı oluştur:
       "day": 1,
       "title": "Gün başlığı",
       "activities": ["Aktivite 1", "Aktivite 2", "Aktivite 3", "Aktivite 4"],
-      "time": "Sabah - Akşam"
+      "time": "Sabah - Akşam",
+      "meals": {
+        "breakfast": "Kahvaltı önerisi — mekan adı veya yiyecek türü",
+        "lunch": "Öğle yemeği önerisi — mekan adı veya yiyecek türü",
+        "dinner": "Akşam yemeği önerisi — mekan adı veya yiyecek türü"
+      }
     }
   ],
   "recommendations": {
@@ -191,7 +196,8 @@ Kurallar:
 - activities içinde de mümkün olduğunca gerçek mekan isimleri kullan.
 - İlgi alanlarına uygun aktiviteler öner.
 - estimatedCost alanına kişi başı toplam tahmini harcamayı Türk Lirası (₺) cinsinden sayısal olarak yaz (örn: 8500). Konaklama, yemek ve ulaşım dahil kaba bir tahmin yap.
-- packingList için destinasyon iklimine, süreye ve ilgi alanlarına göre kişiselleştirilmiş eşya listesi oluştur. Her kategoride 3-6 madde olsun. Türkçe yaz.`;
+- packingList için destinasyon iklimine, süreye ve ilgi alanlarına göre kişiselleştirilmiş eşya listesi oluştur. Her kategoride 3-6 madde olsun. Türkçe yaz.
+- Her gün için meals alanında breakfast, lunch, dinner önerisi yaz. Mekan adı veya yemek türü belirt. Destinasyona özgü yerel lezzetlere öncelik ver. Türkçe yaz.`;
 };
 
 export const parseAIResponse = (responseText: string): AIPlan => {
@@ -403,6 +409,39 @@ async function generateTripPlanDirect(tripData: TripData): Promise<AIPlan> {
     return mergeGoogleIntoPlan(aiPlan, googleRecommendations);
   }
 
+  return aiPlan;
+}
+
+export type AlternativePlanModifier = "budget" | "cultural" | "adventure" | "family";
+
+const ALTERNATIVE_MODIFIER_PROMPTS: Record<AlternativePlanModifier, string> = {
+  budget:
+    "Bütçe odaklı plan: Ücretli aktiviteleri ücretsiz alternatiflerle değiştir, ekonomik restoranlar öner, toplu taşıma kullan. Tahmini maliyeti düşür.",
+  cultural:
+    "Kültür odaklı plan: Müzeler, tarihi mekanlar, yerel gelenekler, sanat galerileri ve kültürel etkinliklere öncelik ver.",
+  adventure:
+    "Macera odaklı plan: Doğa yürüyüşleri, outdoor sporlar, adrenalin aktiviteleri ve keşif turlarını ön plana çıkar.",
+  family:
+    "Aile dostu plan: Çocuklara uygun aktiviteler, eğlence parkları, güvenli ve kolay ulaşılabilir mekanlar öner. Uzun yürüyüşlerden kaçın.",
+};
+
+export async function regenerateTripPlan(
+  tripData: TripData,
+  modifier: AlternativePlanModifier,
+): Promise<AIPlan> {
+  if (!tripData?.selectedPlace) throw new Error("Seyahat yeri bulunamadı");
+
+  const modifierText = ALTERNATIVE_MODIFIER_PROMPTS[modifier];
+  const googleRecommendations = await fetchGoogleRecommendationsClient(tripData).catch(() => null);
+  const basePrompt = buildPrompt(tripData, googleRecommendations);
+  const prompt = `${basePrompt}\n\nÖNEMLİ EK YÖNERGE: ${modifierText}`;
+
+  const responseText = await generateWithProviderDirect(getAiProvider(), prompt);
+  const aiPlan = parseAIResponse(responseText);
+
+  if (googleRecommendations) {
+    return mergeGoogleIntoPlan(aiPlan, googleRecommendations);
+  }
   return aiPlan;
 }
 

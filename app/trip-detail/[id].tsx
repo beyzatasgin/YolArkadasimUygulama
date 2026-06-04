@@ -27,6 +27,7 @@ import WeatherCard from "../../components/WeatherCard";
 import PackingChecklist from "../../components/PackingChecklist";
 import { useAttractionPins } from "../../hooks/useAttractionPins";
 import { cancelTripNotifications } from "../../services/notificationService";
+import { regenerateTripPlan, type AlternativePlanModifier } from "../../services/tripPlanService";
 import { getPlaceImageUrl as getPlaceImage } from "../../utils/imageHelper";
 import { Colors } from "../../constants/Colors";
 import { getInterestLabel } from "../../constants/tripPreferences";
@@ -59,6 +60,8 @@ export default function TripDetailScreen() {
   const [editTripName, setEditTripName] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [activeModifier, setActiveModifier] = useState<AlternativePlanModifier | null>(null);
 
   const centerLat = trip?.selectedPlace?.coordinates?.lat
     ? Number(trip.selectedPlace.coordinates.lat)
@@ -248,6 +251,46 @@ export default function TripDetailScreen() {
       setSavingEdit(false);
     }
   }, [editNotes, editTripName, id]);
+
+  const handleRegeneratePlan = useCallback(
+    async (modifier: AlternativePlanModifier) => {
+      if (!trip || regenerating) return;
+      Alert.alert(
+        "Planı Yeniden Oluştur",
+        "Mevcut AI planı bu tercihle yeniden oluşturulacak. Devam edilsin mi?",
+        [
+          { text: "İptal", style: "cancel" },
+          {
+            text: "Oluştur",
+            onPress: async () => {
+              setRegenerating(true);
+              setActiveModifier(modifier);
+              try {
+                const tripDataForRegen = {
+                  selectedPlace: trip.selectedPlace,
+                  startDate: trip.startDate,
+                  endDate: trip.endDate,
+                  duration: trip.duration,
+                  travelers: trip.travelers,
+                  interests: trip.interests || [],
+                };
+                const newPlan = await regenerateTripPlan(tripDataForRegen as any, modifier);
+                await updateDoc(doc(db, "trips", id as string), { aiPlan: newPlan });
+                setTrip((prev) => ({ ...prev, aiPlan: newPlan }));
+                Alert.alert("Tamamlandı", "Yeni plan oluşturuldu!");
+              } catch (err: any) {
+                Alert.alert("Hata", err?.message || "Plan oluşturulamadı.");
+              } finally {
+                setRegenerating(false);
+                setActiveModifier(null);
+              }
+            },
+          },
+        ],
+      );
+    },
+    [trip, regenerating, id],
+  );
 
   useEffect(() => {
     navigation.setOptions({ headerShown: false });
@@ -996,12 +1039,63 @@ export default function TripDetailScreen() {
             </InfoCard>
           )}
 
+          {/* ── Alternatif Plan ──────────────────────────── */}
+          {trip.aiPlan && (
+            <InfoCard
+              iconName="refresh-circle"
+              iconColor="#F59E0B"
+              iconBg="#FFFBEB"
+              title="Alternatif Plan Öner"
+              collapsible
+              defaultCollapsed={true}
+            >
+              <Text style={{ fontFamily: "outfit", fontSize: 13, color: TEXT_MUTED, marginBottom: 12 }}>
+                AI planını farklı bir odakla yeniden oluştur:
+              </Text>
+              {(
+                [
+                  { key: "budget" as AlternativePlanModifier, label: "Bütçemi Düşür", icon: "wallet-outline", color: "#10B981", bg: "#ECFDF5" },
+                  { key: "cultural" as AlternativePlanModifier, label: "Daha Kültürel", icon: "library-outline", color: "#6366F1", bg: "#EEF2FF" },
+                  { key: "adventure" as AlternativePlanModifier, label: "Maceraya Hazırlan", icon: "bicycle-outline", color: "#EF4444", bg: "#FEF2F2" },
+                  { key: "family" as AlternativePlanModifier, label: "Aile Dostu", icon: "people-outline", color: "#F59E0B", bg: "#FFFBEB" },
+                ] as const
+              ).map(({ key, label, icon, color, bg }) => (
+                <TouchableOpacity
+                  key={key}
+                  onPress={() => handleRegeneratePlan(key)}
+                  disabled={regenerating}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: 12,
+                    borderRadius: 12,
+                    backgroundColor: bg,
+                    marginBottom: 8,
+                    opacity: regenerating && activeModifier !== key ? 0.5 : 1,
+                  }}
+                >
+                  {regenerating && activeModifier === key ? (
+                    <ActivityIndicator size="small" color={color} />
+                  ) : (
+                    <Ionicons name={icon as any} size={20} color={color} />
+                  )}
+                  <Text style={{ fontFamily: "outfit-medium", fontSize: 14, color, flex: 1 }}>
+                    {label}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={color} />
+                </TouchableOpacity>
+              ))}
+            </InfoCard>
+          )}
+
           {/* ── AI Asistan Butonu ── */}
           <TouchableOpacity
             onPress={() =>
               router.push({
                 pathname: "/ai-chat",
                 params: {
+                  tripId: trip.id,
                   placeName: trip.selectedPlace?.name || "",
                   startDate: trip.startDate ? new Date(trip.startDate).toLocaleDateString("tr-TR") : "",
                   endDate: trip.endDate ? new Date(trip.endDate).toLocaleDateString("tr-TR") : "",

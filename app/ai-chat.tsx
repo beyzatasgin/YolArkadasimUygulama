@@ -1,8 +1,10 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -13,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { auth, db } from "../configs/FirebaseConfig";
 import { sendChatMessage, type ChatMessage, type TripContext } from "../services/chatService";
 
 const ACCENT = "#6366F1";
@@ -34,6 +37,7 @@ export default function AiChat() {
   const navigation = useNavigation();
   const router = useRouter();
   const params = useLocalSearchParams<{
+    tripId?: string;
     placeName?: string;
     startDate?: string;
     endDate?: string;
@@ -41,6 +45,8 @@ export default function AiChat() {
     travelers?: string;
     interests?: string;
   }>();
+
+  const tripId = params.tripId || null;
 
   const tripContext: TripContext | undefined = params.placeName
     ? {
@@ -53,19 +59,64 @@ export default function AiChat() {
       }
     : undefined;
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "welcome",
-      role: "assistant",
-      content: tripContext?.placeName
-        ? `Merhaba! ✈️ ${tripContext.placeName} seyahatin için buradayım. Vize, hava durumu, ulaşım, yerel kültür veya aklına takılan her şeyi sorabilirsin!`
-        : "Merhaba! ✈️ Ben Yol Arkadaşım AI asistanıyım. Seyahat planlaması, destinasyonlar, vize bilgisi ve daha fazlası hakkında sana yardımcı olabilirim. Ne öğrenmek istersin?",
-      timestamp: new Date(),
-    },
-  ]);
+  // useMemo ile sabit tut — dependency array'de kullanılabilsin
+  const welcomeMessage: ChatMessage = useMemo(() => ({
+    id: "welcome",
+    role: "assistant",
+    content: tripContext?.placeName
+      ? `Merhaba! ✈️ ${tripContext.placeName} seyahatin için buradayım. Vize, hava durumu, ulaşım, yerel kültür veya aklına takılan her şeyi sorabilirsin!`
+      : "Merhaba! ✈️ Ben Yol Arkadaşım AI asistanıyım. Seyahat planlaması, destinasyonlar, vize bilgisi ve daha fazlası hakkında sana yardımcı olabilirim. Ne öğrenmek istersin?",
+    timestamp: new Date(),
+  }), []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [messages, setMessages] = useState<ChatMessage[]>([welcomeMessage]);
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  // Yükleme sonrası ilk save tetiklenmesini önler
+  const justLoadedRef = useRef(false);
+
+  // Firestore'dan geçmiş mesajları yükle
+  useEffect(() => {
+    if (!tripId || !db || !auth?.currentUser) {
+      setHistoryLoaded(true);
+      return;
+    }
+    const loadHistory = async () => {
+      try {
+        const snap = await getDoc(doc(db, "trips", tripId));
+        if (snap.exists()) {
+          const saved = snap.data()?.chatHistory;
+          if (Array.isArray(saved) && saved.length > 0) {
+            const restored: ChatMessage[] = saved.map((m: any) => ({
+              ...m,
+              timestamp: m.timestamp?.toDate ? m.timestamp.toDate() : new Date(m.timestamp),
+            }));
+            justLoadedRef.current = true;
+            setMessages(restored);
+          }
+        }
+      } catch {}
+      setHistoryLoaded(true);
+    };
+    loadHistory();
+  }, [tripId]);
+
+  // Mesajlar değişince Firestore'a kaydet (geçmiş yüklendikten sonra)
+  useEffect(() => {
+    if (!tripId || !db || !auth?.currentUser || !historyLoaded) return;
+    // İlk yükleme sonrası gereksiz tekrar yazmayı atla
+    if (justLoadedRef.current) {
+      justLoadedRef.current = false;
+      return;
+    }
+    const serialized = messages.map((m) => ({
+      ...m,
+      timestamp: m.timestamp instanceof Date ? m.timestamp.toISOString() : m.timestamp,
+    }));
+    updateDoc(doc(db, "trips", tripId), { chatHistory: serialized }).catch(() => {});
+  }, [messages, tripId, historyLoaded]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -78,6 +129,26 @@ export default function AiChat() {
       flatListRef.current?.scrollToEnd({ animated: true });
     }, 100);
   }, []);
+
+  const handleClearHistory = useCallback(() => {
+    Alert.alert(
+      "Sohbeti Temizle",
+      "Tüm mesajlar silinecek. Emin misin?",
+      [
+        { text: "İptal", style: "cancel" },
+        {
+          text: "Temizle",
+          style: "destructive",
+          onPress: () => {
+            setMessages([welcomeMessage]);
+            if (tripId && db && auth?.currentUser) {
+              updateDoc(doc(db, "trips", tripId), { chatHistory: [] }).catch(() => {});
+            }
+          },
+        },
+      ],
+    );
+  }, [tripId, welcomeMessage]);
 
   const handleSend = useCallback(
     async (text?: string) => {
@@ -180,7 +251,18 @@ export default function AiChat() {
           </View>
         </View>
 
-        <View style={styles.onlineDot} />
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          {tripId && messages.length > 1 && (
+            <TouchableOpacity
+              onPress={handleClearHistory}
+              style={[styles.backButton, { backgroundColor: "rgba(239,68,68,0.25)" }]}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="trash-outline" size={17} color="#FCA5A5" />
+            </TouchableOpacity>
+          )}
+          <View style={styles.onlineDot} />
+        </View>
       </View>
 
       {/* Mesajlar */}

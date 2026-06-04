@@ -8,11 +8,18 @@ export type PlaceRecommendation = {
   price?: string | null;
 };
 
+export type DayMeals = {
+  breakfast?: string;
+  lunch?: string;
+  dinner?: string;
+};
+
 export type DayItinerary = {
   day: number;
   title: string;
   activities: string[];
   time: string;
+  meals?: DayMeals;
 };
 
 export type AIRecommendations = {

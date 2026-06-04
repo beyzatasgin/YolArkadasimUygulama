@@ -615,6 +615,69 @@ export default function DayDetail() {
           </View>
         )}
 
+        {/* Günlük Yemek Önerileri */}
+        {day.meals && (day.meals.breakfast || day.meals.lunch || day.meals.dinner) && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="fast-food" size={20} color="#F59E0B" />
+              <Text style={styles.sectionTitle}>Günün Yemekleri</Text>
+            </View>
+            <View style={styles.mealsCard}>
+              {day.meals.breakfast && (
+                <View style={styles.mealRow}>
+                  <View style={[styles.mealIconCircle, { backgroundColor: "#FEF3C7" }]}>
+                    <Text style={styles.mealEmoji}>🌅</Text>
+                  </View>
+                  <View style={styles.mealText}>
+                    <Text style={styles.mealLabel}>Kahvaltı</Text>
+                    <Text style={styles.mealValue}>{day.meals.breakfast}</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => searchRestaurantOnMaps(day.meals.breakfast)}
+                    style={styles.mealMapBtn}
+                  >
+                    <Ionicons name="map-outline" size={16} color={ACCENT} />
+                  </TouchableOpacity>
+                </View>
+              )}
+              {day.meals.lunch && (
+                <View style={[styles.mealRow, day.meals.breakfast ? styles.mealRowBorder : null]}>
+                  <View style={[styles.mealIconCircle, { backgroundColor: "#ECFDF5" }]}>
+                    <Text style={styles.mealEmoji}>☀️</Text>
+                  </View>
+                  <View style={styles.mealText}>
+                    <Text style={styles.mealLabel}>Öğle Yemeği</Text>
+                    <Text style={styles.mealValue}>{day.meals.lunch}</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => searchRestaurantOnMaps(day.meals.lunch)}
+                    style={styles.mealMapBtn}
+                  >
+                    <Ionicons name="map-outline" size={16} color={ACCENT} />
+                  </TouchableOpacity>
+                </View>
+              )}
+              {day.meals.dinner && (
+                <View style={[styles.mealRow, (day.meals.breakfast || day.meals.lunch) ? styles.mealRowBorder : null]}>
+                  <View style={[styles.mealIconCircle, { backgroundColor: "#EEF2FF" }]}>
+                    <Text style={styles.mealEmoji}>🌙</Text>
+                  </View>
+                  <View style={styles.mealText}>
+                    <Text style={styles.mealLabel}>Akşam Yemeği</Text>
+                    <Text style={styles.mealValue}>{day.meals.dinner}</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => searchRestaurantOnMaps(day.meals.dinner)}
+                    style={styles.mealMapBtn}
+                  >
+                    <Ionicons name="map-outline" size={16} color={ACCENT} />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
         {/* Restaurants */}
         {recommendations?.restaurants && recommendations.restaurants.length > 0 && (
           <View style={styles.section}>
@@ -1194,5 +1257,65 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1, shadowRadius: 6, elevation: 3,
+  },
+
+  /* Günlük Yemek Önerileri */
+  mealsCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  mealRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  mealRowBorder: {
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+  },
+  mealIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  mealEmoji: {
+    fontSize: 18,
+  },
+  mealText: {
+    flex: 1,
+    gap: 2,
+  },
+  mealLabel: {
+    fontFamily: "outfit-medium",
+    fontSize: 12,
+    color: TEXT_MUTED,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  mealValue: {
+    fontFamily: "outfit",
+    fontSize: 14,
+    color: TEXT_PRIMARY,
+    lineHeight: 20,
+  },
+  mealMapBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#EEF2FF",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
 });
