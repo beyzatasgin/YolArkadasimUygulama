@@ -27,7 +27,8 @@ Yol Arkadaşım, kullanıcıların destinasyon seçerek tarih ve ilgi alanların
 - Vize, para birimi, hava, ulaşım, kültür gibi konularda anlık yanıt
 - Seyahate özel bağlamsal sorular (destinasyon, tarih, ilgi alanları)
 - "Vize gerekiyor mu?", "Yerel yemekler neler?" gibi **hızlı soru chips'leri**
-- Mesaj geçmişi korunarak konuşma devam eder
+- **Sohbet geçmişi Firestore'a kaydedilir** — uygulama kapanınca silinmez, kaldığı yerden devam eder
+- Sohbeti temizleme butonu ile geçmiş sıfırlanabilir
 
 ### 🌤️ Hava Durumu
 - Destinasyonun **anlık hava durumu** ve **7 günlük tahmini** (seyahat detay sayfasında)
@@ -42,6 +43,17 @@ Yol Arkadaşım, kullanıcıların destinasyon seçerek tarih ve ilgi alanların
 - İnteraktif harita görünümü (`react-native-maps`)
 - **Harita pinleri**: AI planındaki restoranlar, turistik yerler ve konaklama noktaları haritada farklı renk pinlerle gösterilir
 - **Nominatim (OpenStreetMap)** ile ücretsiz geocoding — pin'e tıklayınca yer adı balonu çıkar
+
+### ✈️ Alternatif Plan Önerisi
+- Mevcut AI planını **tek tıkla yeniden oluşturma**
+- 4 farklı mod: **Bütçemi Düşür** · **Daha Kültürel** · **Maceraya Hazırlan** · **Aile Dostu**
+- Her mod AI'ya özel yönerge göndererek farklı odaklı plan üretir
+- Yeni plan Firestore'a kaydedilir ve anında uygulanır
+
+### 🍽️ Günlük Yemek Önerileri
+- AI planında her gün için **kahvaltı, öğle ve akşam yemeği** önerisi
+- Destinasyona özgü yerel lezzetlere öncelik verilir
+- Her öneriye tıklayınca Google Maps'te arama yapılır
 
 ### 📅 Seyahat Yönetimi
 - 6 adımlı sezgisel seyahat oluşturma akışı
@@ -214,8 +226,9 @@ Seyahatlerim (Ana Ekran)
         6. Kaydet
       ↓
 Seyahat Detayı
-  ├── Günlük Plan → Harita
-  ├── 💬 AI Asistan ile Sohbet Et
+  ├── Günlük Plan → Gün Detayı (aktiviteler + 🍽️ yemek önerileri + harita)
+  ├── ✈️ Alternatif Plan (Bütçemi Düşür / Kültürel / Macera / Aile)
+  ├── 💬 AI Asistan ile Sohbet Et (geçmiş kaydedilir)
   └── ⭐ Değerlendirme (geçmiş seyahatler)
       ↓
 Profil → 📊 İstatistikler
