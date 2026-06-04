@@ -1,4 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation, useRouter } from "expo-router";
 import {
@@ -16,7 +17,7 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { getDownloadURL, ref, uploadString } from "firebase/storage";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -197,13 +198,13 @@ export default function Profile() {
   const uploadPhoto = async (uri: string): Promise<string> => {
     if (!storage || !auth?.currentUser) throw new Error("Storage yok");
 
-    // fetch ile blob oluştur — Expo Go dahil tüm ortamlarda çalışır
-    const response = await fetch(uri);
-    if (!response.ok) throw new Error("Fotoğraf okunamadı");
-    const blob = await response.blob();
+    // expo-file-system ile base64 oku — Expo Go dahil tüm ortamlarda çalışır
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
 
     const photoRef = ref(storage, `profile-photos/${auth.currentUser.uid}/${Date.now()}.jpg`);
-    await uploadBytes(photoRef, blob, { contentType: "image/jpeg" });
+    await uploadString(photoRef, base64, "base64", { contentType: "image/jpeg" });
 
     // getDownloadURL bazen gecikebilir, 3 kez dene
     for (let attempt = 1; attempt <= 3; attempt++) {
@@ -245,6 +246,8 @@ export default function Profile() {
       setEditModalVisible(false);
       if (photoFailed) {
         Alert.alert("Uyarı", "Fotoğraf yüklenemedi ama isim güncellendi.");
+      } else if (isNew) {
+        Alert.alert("✅ Kaydedildi", "Profil fotoğrafı başarıyla güncellendi.");
       } else {
         Alert.alert("✅ Kaydedildi", "Profilin güncellendi.");
       }
