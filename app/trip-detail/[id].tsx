@@ -750,28 +750,6 @@ export default function TripDetailScreen() {
               iconBg="#EEF2FF"
               title="AI Seyahat Planı"
             >
-              {/* Tahmini Maliyet */}
-              {trip.aiPlan.estimatedCost != null && (
-                <View style={styles.costBadge}>
-                  <Ionicons name="wallet-outline" size={18} color={SUCCESS} />
-                  <Text style={styles.costText}>
-                    Tahmini Bütçe:{" "}
-                    <Text style={{ fontFamily: "outfit-bold" }}>
-                      {trip.aiPlan.estimatedCost.toLocaleString("tr-TR")} ₺
-                    </Text>
-                    {"  "}
-                    <Text
-                      style={{
-                        fontFamily: "outfit",
-                        fontSize: 12,
-                        color: "#047857",
-                      }}
-                    >
-                      (kişi başı)
-                    </Text>
-                  </Text>
-                </View>
-              )}
 
               {/* Günlük Plan */}
               {trip.aiPlan.itinerary && trip.aiPlan.itinerary.length > 0 && (
@@ -1367,21 +1345,6 @@ const styles = StyleSheet.create({
   },
 
   /* Cost badge */
-  costBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#ECFDF5",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 4,
-    gap: 8,
-  },
-  costText: {
-    fontFamily: "outfit-medium",
-    fontSize: 14,
-    color: "#065F46",
-  },
-
   /* Day cards */
   dayCard: {
     backgroundColor: BODY_BG,
