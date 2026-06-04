@@ -25,8 +25,9 @@ Yol Arkadaşım, kullanıcıların destinasyon seçerek tarih ve ilgi alanların
 ### 💬 AI Seyahat Asistanı
 - Seyahat hakkında **sohbet tabanlı** sorular sorma
 - Vize, para birimi, hava, ulaşım, kültür gibi konularda anlık yanıt
-- Seyahate özel bağlamsal sorular (destinasyon, tarih, ilgi alanları)
-- "Vize gerekiyor mu?", "Yerel yemekler neler?" gibi **hızlı soru chips'leri**
+- **İki mod:**
+  - 🗺️ **Seyahate özel mod** — Seyahat detayından açılınca destinasyon, tarih ve ilgi alanları bağlamı otomatik aktarılır; "Vize gerekiyor mu?", "Yerel yemekler neler?" gibi hedefe özel hızlı sorular gösterilir
+  - 🌐 **Genel mod** — Seyahatlerim ekranından açılınca genel seyahat danışmanı olarak çalışır; "Bütçe seyahat için öneriler?", "Bavul nasıl hazırlanır?" gibi genel sorular gösterilir
 - **Sohbet geçmişi Firestore'a kaydedilir** — uygulama kapanınca silinmez, kaldığı yerden devam eder
 - Sohbeti temizleme butonu ile geçmiş sıfırlanabilir
 
@@ -87,7 +88,7 @@ Yol Arkadaşım, kullanıcıların destinasyon seçerek tarih ve ilgi alanların
 
 ### 👤 Kullanıcı Profili
 - Firebase Authentication (E-posta/Şifre + Google)
-- Profil fotoğrafı yükleme (Firebase Storage)
+- Profil fotoğrafı yükleme — `expo-file-system` ile base64 okuma, Firebase Storage'a yükleme
 - Ad güncelleme, şifre değiştirme (accordion)
 - Hızlı erişim: Seyahatlerim, İstatistikler, Kayıtlı Yerler, Gizlilik
 
@@ -149,6 +150,8 @@ Yol Arkadaşım, kullanıcıların destinasyon seçerek tarih ve ilgi alanların
 ### Gereksinimler
 - Node.js 18+
 - Expo Go (mobil test için) veya Android/iOS Simulator
+
+> ⚠️ **Not:** Expo SDK 53 itibarıyla remote push bildirimleri Expo Go'da desteklenmemektedir. Yerel (zamanlanmış) bildirimler çalışmaya devam eder. Tam bildirim desteği için development build kullanın.
 
 ### 1. Repoyu Klonla
 ```bash
