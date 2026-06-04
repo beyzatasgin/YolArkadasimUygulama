@@ -2,18 +2,20 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import Constants from "expo-constants";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
   Linking,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import MapView, { Callout, Marker } from "react-native-maps";
 
 const ACCENT = "#6366F1";
 const DARK_HEADER = "#0A0F1E";
@@ -34,6 +36,7 @@ export default function DayDetail() {
   const [googleDataLoading, setGoogleDataLoading] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"list" | "map">("list");
 
   const dayNumber = params.dayNumber || "";
 
@@ -136,6 +139,55 @@ export default function DayDetail() {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return earthRadiusKm * c;
   };
+
+  // Harita pinleri — placesInfoMap'ten koordinatı olan tüm yerler
+  const mapPins = useMemo(() => {
+    const pins: Array<{ id: string; name: string; lat: number; lon: number; type: "activity" | "restaurant" | "attraction" }> = [];
+
+    const activityNames = (day?.activities ?? []).map(extractActivityTitle);
+    activityNames.forEach((name, i) => {
+      const info = placesInfoMap[name];
+      if (info?.coordinates) {
+        pins.push({ id: `act-${i}`, name, lat: Number(info.coordinates.lat), lon: Number(info.coordinates.lon), type: "activity" });
+      }
+    });
+
+    (recommendations?.restaurants ?? []).forEach((item, i) => {
+      const nm = normalizeListItem(item, "Restoran").name;
+      const info = placesInfoMap[nm];
+      if (info?.coordinates) {
+        pins.push({ id: `rest-${i}`, name: nm, lat: Number(info.coordinates.lat), lon: Number(info.coordinates.lon), type: "restaurant" });
+      }
+    });
+
+    (recommendations?.attractions ?? []).forEach((item, i) => {
+      const nm = normalizeListItem(item, "Mekan").name;
+      const info = placesInfoMap[nm];
+      if (info?.coordinates) {
+        pins.push({ id: `attr-${i}`, name: nm, lat: Number(info.coordinates.lat), lon: Number(info.coordinates.lon), type: "attraction" });
+      }
+    });
+
+    return pins.filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lon));
+  }, [placesInfoMap, day?.activities, recommendations]);
+
+  const mapRegion = useMemo(() => {
+    const center = placeCoordinates ?? (mapPins[0] ? { lat: mapPins[0].lat, lon: mapPins[0].lon } : null);
+    if (!center) return null;
+    const lats = [Number(center.lat), ...mapPins.map(p => p.lat)];
+    const lons = [Number(center.lon), ...mapPins.map(p => p.lon)];
+    const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    const minLon = Math.min(...lons), maxLon = Math.max(...lons);
+    return {
+      latitude:      (minLat + maxLat) / 2,
+      longitude:     (minLon + maxLon) / 2,
+      latitudeDelta:  Math.max((maxLat - minLat) * 1.5, 0.05),
+      longitudeDelta: Math.max((maxLon - minLon) * 1.5, 0.05),
+    };
+  }, [mapPins, placeCoordinates]);
+
+  const PIN_COLORS = { activity: "#6366F1", restaurant: "#F59E0B", attraction: "#10B981" };
+  const PIN_LABELS = { activity: "Aktivite", restaurant: "Restoran", attraction: "Gezilecek Yer" };
 
   const openDistanceSortedRoute = async () => {
     try {
@@ -355,8 +407,81 @@ export default function DayDetail() {
           </Text>
           {placeName ? <Text style={styles.headerSub}>{placeName}</Text> : null}
         </View>
-        <View style={{ width: 38 }} />
+        {/* Liste / Harita toggle */}
+        <TouchableOpacity
+          onPress={() => setActiveTab(t => t === "list" ? "map" : "list")}
+          style={[styles.tabToggle, activeTab === "map" && styles.tabToggleActive]}
+        >
+          <Ionicons
+            name={activeTab === "map" ? "list-outline" : "map-outline"}
+            size={18}
+            color={activeTab === "map" ? ACCENT : "#fff"}
+          />
+        </TouchableOpacity>
       </View>
+
+      {/* ── Harita Görünümü ── */}
+      {activeTab === "map" ? (
+        <View style={{ flex: 1 }}>
+          {googleDataLoading && (
+            <View style={styles.googleLoadingPill}>
+              <ActivityIndicator size="small" color={ACCENT} />
+              <Text style={styles.googleLoadingText}>Pinler yükleniyor...</Text>
+            </View>
+          )}
+          {mapRegion ? (
+            <MapView
+              style={{ flex: 1 }}
+              initialRegion={mapRegion}
+              showsUserLocation={Platform.OS !== "web"}
+            >
+              {/* Merkez pini */}
+              {placeCoordinates && (
+                <Marker
+                  coordinate={{ latitude: Number(placeCoordinates.lat), longitude: Number(placeCoordinates.lon) }}
+                  title={placeName || "Destinasyon"}
+                  pinColor="#6366F1"
+                />
+              )}
+              {/* Aktivite / restoran / yer pinleri */}
+              {mapPins.map(pin => (
+                <Marker
+                  key={pin.id}
+                  coordinate={{ latitude: pin.lat, longitude: pin.lon }}
+                  pinColor={PIN_COLORS[pin.type]}
+                >
+                  <Callout>
+                    <View style={styles.callout}>
+                      <Text style={[styles.calloutType, { color: PIN_COLORS[pin.type] }]}>
+                        {PIN_LABELS[pin.type]}
+                      </Text>
+                      <Text style={styles.calloutName}>{pin.name}</Text>
+                    </View>
+                  </Callout>
+                </Marker>
+              ))}
+            </MapView>
+          ) : (
+            <View style={styles.mapEmpty}>
+              <Ionicons name="map-outline" size={52} color="#D1D5DB" />
+              <Text style={styles.mapEmptyText}>
+                {googleDataLoading
+                  ? "Koordinatlar yükleniyor..."
+                  : "Harita için koordinat bulunamadı.\nGoogle Places API anahtarı gerekli."}
+              </Text>
+            </View>
+          )}
+
+          {/* Lejant */}
+          {mapPins.length > 0 && (
+            <View style={styles.legend}>
+              <LegendDot color="#6366F1" label="Aktivite" />
+              <LegendDot color="#F59E0B" label="Restoran" />
+              <LegendDot color="#10B981" label="Gezilecek Yer" />
+            </View>
+          )}
+        </View>
+      ) : (
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Google loading pill */}
@@ -653,6 +778,16 @@ export default function DayDetail() {
           </View>
         )}
       </ScrollView>
+      )}  {/* activeTab === "list" kapanışı */}
+    </View>
+  );
+}
+
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: color }} />
+      <Text style={{ fontFamily: "outfit", fontSize: 11, color: "#6B7280" }}>{label}</Text>
     </View>
   );
 }
@@ -1030,5 +1165,34 @@ const styles = StyleSheet.create({
     fontFamily: "outfit",
     fontSize: 13,
     color: "rgba(255,255,255,0.55)",
+  },
+  tabToggle: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.2)",
+  },
+  tabToggleActive: {
+    backgroundColor: "#fff",
+  },
+  callout: { padding: 6, maxWidth: 180, gap: 2 },
+  calloutType: { fontFamily: "outfit-medium", fontSize: 11 },
+  calloutName: { fontFamily: "outfit", fontSize: 13, color: "#111827" },
+  mapEmpty: {
+    flex: 1, alignItems: "center", justifyContent: "center",
+    gap: 14, padding: 40,
+  },
+  mapEmptyText: {
+    fontFamily: "outfit", fontSize: 14, color: "#9CA3AF",
+    textAlign: "center", lineHeight: 21,
+  },
+  legend: {
+    position: "absolute", bottom: 24, left: 16,
+    flexDirection: "row", gap: 14,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 20,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1, shadowRadius: 6, elevation: 3,
   },
 });

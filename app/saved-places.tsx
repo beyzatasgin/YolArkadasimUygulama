@@ -8,7 +8,7 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { useMemo, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -21,6 +21,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import MapView, { Callout, Marker } from "react-native-maps";
 import { auth, db, firebaseInitError } from "../configs/FirebaseConfig";
 import {
   FIREBASE_AUTH_INIT_ERROR_TITLE,
@@ -39,6 +40,22 @@ export default function SavedPlaces() {
   const router = useRouter();
   const [savedPlaces, setSavedPlaces] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<"list" | "map">("list");
+
+  const mapRegion = useMemo(() => {
+    const withCoords = savedPlaces.filter(p => p.coordinates?.lat && p.coordinates?.lon);
+    if (!withCoords.length) return null;
+    const lats = withCoords.map(p => Number(p.coordinates.lat));
+    const lons = withCoords.map(p => Number(p.coordinates.lon));
+    const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    const minLon = Math.min(...lons), maxLon = Math.max(...lons);
+    return {
+      latitude:      (minLat + maxLat) / 2,
+      longitude:     (minLon + maxLon) / 2,
+      latitudeDelta:  Math.max((maxLat - minLat) * 1.5, 0.08),
+      longitudeDelta: Math.max((maxLon - minLon) * 1.5, 0.08),
+    };
+  }, [savedPlaces]);
 
   useEffect(() => {
     navigation.setOptions({
@@ -247,6 +264,25 @@ export default function SavedPlaces() {
               Kaydedilen Yerler
             </Text>
           </View>
+
+          {/* Liste / Harita toggle */}
+          {savedPlaces.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setViewMode(v => v === "list" ? "map" : "list")}
+              style={{
+                width: 40, height: 40, borderRadius: 20,
+                backgroundColor: viewMode === "map" ? "#fff" : "rgba(255,255,255,0.15)",
+                justifyContent: "center", alignItems: "center",
+                borderWidth: 1, borderColor: "rgba(255,255,255,0.2)",
+              }}
+            >
+              <Ionicons
+                name={viewMode === "map" ? "list-outline" : "map-outline"}
+                size={20}
+                color={viewMode === "map" ? ACCENT : "#fff"}
+              />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Count badge */}
@@ -275,8 +311,73 @@ export default function SavedPlaces() {
         )}
       </View>
 
+      {/* ── Harita Görünümü ── */}
+      {viewMode === "map" && (
+        <View style={{ flex: 1 }}>
+          {mapRegion ? (
+            <MapView
+              style={{ flex: 1 }}
+              initialRegion={mapRegion}
+              showsUserLocation={Platform.OS !== "web"}
+            >
+              {savedPlaces
+                .filter(p => p.coordinates?.lat && p.coordinates?.lon)
+                .map((place, idx) => (
+                  <Marker
+                    key={place.id}
+                    coordinate={{
+                      latitude:  Number(place.coordinates.lat),
+                      longitude: Number(place.coordinates.lon),
+                    }}
+                    pinColor={ACCENT}
+                  >
+                    <Callout onPress={() => openInMaps(place)}>
+                      <View style={{ padding: 8, maxWidth: 200, gap: 4 }}>
+                        <Text style={{ fontFamily: "outfit-bold", fontSize: 13, color: "#111827" }}>
+                          {place.name}
+                        </Text>
+                        {place.address && (
+                          <Text style={{ fontFamily: "outfit", fontSize: 11, color: "#9CA3AF" }} numberOfLines={2}>
+                            {place.address}
+                          </Text>
+                        )}
+                        <Text style={{ fontFamily: "outfit-medium", fontSize: 11, color: ACCENT, marginTop: 2 }}>
+                          Haritada Aç →
+                        </Text>
+                      </View>
+                    </Callout>
+                  </Marker>
+                ))}
+            </MapView>
+          ) : (
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 14, padding: 40 }}>
+              <Ionicons name="map-outline" size={52} color="#D1D5DB" />
+              <Text style={{ fontFamily: "outfit", fontSize: 14, color: "#9CA3AF", textAlign: "center" }}>
+                Kaydedilen yerlerin konum bilgisi yok
+              </Text>
+            </View>
+          )}
+
+          {/* Pin sayacı */}
+          <View style={{
+            position: "absolute", top: 16, right: 16,
+            backgroundColor: "rgba(255,255,255,0.92)",
+            paddingHorizontal: 14, paddingVertical: 7,
+            borderRadius: 20,
+            shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
+            flexDirection: "row", alignItems: "center", gap: 6,
+          }}>
+            <Ionicons name="heart" size={14} color={ACCENT} />
+            <Text style={{ fontFamily: "outfit-medium", fontSize: 13, color: "#111827" }}>
+              {savedPlaces.filter(p => p.coordinates?.lat).length} yer
+            </Text>
+          </View>
+        </View>
+      )}
+
       {/* ── Content ── */}
-      <ScrollView
+      {viewMode === "list" && <ScrollView
         contentContainerStyle={{ padding: 18, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
@@ -554,7 +655,7 @@ export default function SavedPlaces() {
             </View>
           ))
         )}
-      </ScrollView>
+      </ScrollView>}
     </View>
   );
 }
