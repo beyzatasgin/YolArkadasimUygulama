@@ -63,6 +63,14 @@ const menuActions = [
     target: "/saved-places",
   },
   {
+    icon: "people-outline",
+    label: "Paylaşılan Seyahatler",
+    sub: "Benimle paylaşılan planlar",
+    color: "#F59E0B",
+    bg: "#FFFBEB",
+    target: "/(tabs)/mytrip",
+  },
+  {
     icon: "shield-checkmark-outline",
     label: "Gizlilik",
     sub: "Gizlilik ve güvenlik ayarları",
