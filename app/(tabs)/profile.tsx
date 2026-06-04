@@ -197,15 +197,10 @@ export default function Profile() {
   const uploadPhoto = async (uri: string): Promise<string> => {
     if (!storage || !auth?.currentUser) throw new Error("Storage yok");
 
-    // React Native'de fetch().blob() yerine XMLHttpRequest daha güvenilir
-    const blob: Blob = await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.onload = () => resolve(xhr.response);
-      xhr.onerror = () => reject(new Error("Blob oluşturulamadı"));
-      xhr.responseType = "blob";
-      xhr.open("GET", uri, true);
-      xhr.send(null);
-    });
+    // fetch ile blob oluştur — Expo Go dahil tüm ortamlarda çalışır
+    const response = await fetch(uri);
+    if (!response.ok) throw new Error("Fotoğraf okunamadı");
+    const blob = await response.blob();
 
     const photoRef = ref(storage, `profile-photos/${auth.currentUser.uid}/${Date.now()}.jpg`);
     await uploadBytes(photoRef, blob, { contentType: "image/jpeg" });
