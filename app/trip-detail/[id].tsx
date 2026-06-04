@@ -469,9 +469,12 @@ export default function TripDetailScreen() {
 
   const tripStatus = getTripStatus();
 
+  // Öncelik: Google Places fotoğrafı → Unsplash fallback
+  const googlePhoto = trip?.selectedPlace?.photoUrl;
   const finalImageUrl =
+    (googlePhoto && !googlePhoto.startsWith("https://images.unsplash.com") ? googlePhoto : null) ||
     placeImageUrl ||
-    trip?.selectedPlace?.photoUrl ||
+    googlePhoto ||
     getFallbackImageUrl(trip?.selectedPlace?.name);
 
   return (
