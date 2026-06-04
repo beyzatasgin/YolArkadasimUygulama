@@ -114,7 +114,7 @@ export default function ForgotPassword() {
           {/* Back button */}
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={() => router.canGoBack() ? router.back() : router.replace("/auth/sign-in")}
           >
             <Ionicons name="arrow-back" size={20} color="#E6E9F2" />
           </TouchableOpacity>
@@ -139,7 +139,7 @@ export default function ForgotPassword() {
 
               <TouchableOpacity
                 style={styles.backToLoginButton}
-                onPress={() => router.back()}
+                onPress={() => router.canGoBack() ? router.back() : router.replace("/auth/sign-in")}
               >
                 <Ionicons name="arrow-back-outline" size={17} color="#FFFFFF" />
                 <Text style={styles.backToLoginText}>Giriş Ekranına Dön</Text>

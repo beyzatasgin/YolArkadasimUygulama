@@ -142,7 +142,7 @@ export default function SignUp() {
           {/* Geri + Logo */}
           <View style={styles.topBar}>
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={() => router.canGoBack() ? router.back() : router.replace("/auth/sign-in")}
               style={styles.backButton}
             >
               <Ionicons name="arrow-back" size={20} color="#fff" />
