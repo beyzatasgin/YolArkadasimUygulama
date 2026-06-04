@@ -2,6 +2,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Google from "expo-auth-session/providers/google";
 import Constants from "expo-constants";
 import { useNavigation, useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import {
   GoogleAuthProvider,
   signInWithCredential,
@@ -21,8 +22,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth, firebaseInitError } from "./../../../configs/FirebaseConfig";
 import { getFirebaseAuthInitErrorMessage } from "./../../../configs/FirebaseMessages";
+
+// Google OAuth oturumu tamamlama — ZORUNLU
+WebBrowser.maybeCompleteAuthSession();
+
+const REMEMBER_EMAIL_KEY = "yolarkadasim_remember_email";
 
 const showToast = (msg: string) => {
   if (Platform.OS === "android") {
@@ -42,37 +49,34 @@ export default function SignIn() {
   const [loading, setLoading] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
-  // Giriş animasyonu
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(40)).current;
 
   useEffect(() => {
     navigation.setOptions({ headerShown: false });
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 700,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 700,
-        useNativeDriver: true,
-      }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 700, useNativeDriver: true }),
     ]).start();
+
+    // Kayıtlı e-postayı yükle
+    AsyncStorage.getItem(REMEMBER_EMAIL_KEY).then((saved) => {
+      if (saved) {
+        setEmail(saved);
+        setRememberMe(true);
+      }
+    });
   }, [navigation, fadeAnim, slideAnim]);
 
   const appExtra = Constants.expoConfig?.extra || {};
   const googleAndroidClientId =
-    process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ||
-    appExtra.googleAndroidClientId || "";
+    process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || appExtra.googleAndroidClientId || "";
   const googleIosClientId =
-    process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ||
-    appExtra.googleIosClientId || "";
+    process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || appExtra.googleIosClientId || "";
   const googleWebClientId =
-    process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
-    appExtra.googleWebClientId || "";
+    process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || appExtra.googleWebClientId || "";
   const isExpoGo = Constants.appOwnership === "expo";
 
   const effectiveAndroidClientId = googleAndroidClientId || googleWebClientId;
@@ -98,11 +102,21 @@ export default function SignIn() {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
+
+      // Beni hatırla
+      if (rememberMe) {
+        await AsyncStorage.setItem(REMEMBER_EMAIL_KEY, trimmedEmail);
+      } else {
+        await AsyncStorage.removeItem(REMEMBER_EMAIL_KEY);
+      }
+
       router.replace("/mytrip");
     } catch (error: any) {
-      if (error.code === "auth/invalid-credential" ||
-          error.code === "auth/wrong-password" ||
-          error.code === "auth/user-not-found") {
+      if (
+        error.code === "auth/invalid-credential" ||
+        error.code === "auth/wrong-password" ||
+        error.code === "auth/user-not-found"
+      ) {
         showToast("E-posta veya şifre hatalı");
       } else {
         showToast("Giriş yapılamadı. Tekrar deneyin.");
@@ -117,7 +131,6 @@ export default function SignIn() {
       style={styles.screen}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      {/* Arka plan efektleri */}
       <View style={styles.glowTopLeft} />
       <View style={styles.glowBottomRight} />
       <View style={styles.glowCenter} />
@@ -127,10 +140,8 @@ export default function SignIn() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View
-          style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
-        >
-          {/* Logo & Başlık */}
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+          {/* Logo */}
           <View style={styles.logoSection}>
             <View style={styles.logoCircle}>
               <Ionicons name="airplane" size={32} color="#fff" />
@@ -142,12 +153,10 @@ export default function SignIn() {
           {/* Kart */}
           <View style={styles.card}>
             <Text style={styles.title}>Tekrar hoş geldin 👋</Text>
-            <Text style={styles.subtitle}>
-              Hesabına giriş yap ve yolculuğuna devam et
-            </Text>
+            <Text style={styles.subtitle}>Hesabına giriş yap ve yolculuğuna devam et</Text>
 
             {/* Google Butonu */}
-            {hasGoogleClientId ? (
+            {hasGoogleClientId && (
               <GoogleSignInButton
                 googleAndroidClientId={effectiveAndroidClientId}
                 googleIosClientId={effectiveIosClientId}
@@ -155,7 +164,7 @@ export default function SignIn() {
                 isExpoGo={isExpoGo}
                 router={router}
               />
-            ) : null}
+            )}
 
             {hasGoogleClientId && (
               <View style={styles.orRow}>
@@ -166,17 +175,8 @@ export default function SignIn() {
             )}
 
             {/* E-posta */}
-            <View
-              style={[
-                styles.inputWrapper,
-                emailFocused && styles.inputWrapperFocused,
-              ]}
-            >
-              <Ionicons
-                name="mail-outline"
-                size={18}
-                color={emailFocused ? "#818CF8" : "#6B7280"}
-              />
+            <View style={[styles.inputWrapper, emailFocused && styles.inputWrapperFocused]}>
+              <Ionicons name="mail-outline" size={18} color={emailFocused ? "#818CF8" : "#6B7280"} />
               <TextInput
                 style={styles.input}
                 value={email}
@@ -192,17 +192,8 @@ export default function SignIn() {
             </View>
 
             {/* Şifre */}
-            <View
-              style={[
-                styles.inputWrapper,
-                passwordFocused && styles.inputWrapperFocused,
-              ]}
-            >
-              <Ionicons
-                name="lock-closed-outline"
-                size={18}
-                color={passwordFocused ? "#818CF8" : "#6B7280"}
-              />
+            <View style={[styles.inputWrapper, passwordFocused && styles.inputWrapperFocused]}>
+              <Ionicons name="lock-closed-outline" size={18} color={passwordFocused ? "#818CF8" : "#6B7280"} />
               <TextInput
                 style={styles.input}
                 value={password}
@@ -213,30 +204,30 @@ export default function SignIn() {
                 onFocus={() => setPasswordFocused(true)}
                 onBlur={() => setPasswordFocused(false)}
               />
-              <TouchableOpacity
-                onPress={() => setShowPassword((p) => !p)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons
-                  name={showPassword ? "eye-off-outline" : "eye-outline"}
-                  size={18}
-                  color="#6B7280"
-                />
+              <TouchableOpacity onPress={() => setShowPassword((p) => !p)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={18} color="#6B7280" />
               </TouchableOpacity>
             </View>
 
-            {/* Şifremi Unuttum */}
-            <TouchableOpacity
-              onPress={() =>
-                router.push({
-                  pathname: "/auth/forgot-password",
-                  params: { email: email.trim() },
-                })
-              }
-              style={{ alignSelf: "flex-end", marginBottom: 20 }}
-            >
-              <Text style={styles.forgotText}>Şifremi unuttum</Text>
-            </TouchableOpacity>
+            {/* Beni Hatırla + Şifremi Unuttum */}
+            <View style={styles.rowBetween}>
+              <TouchableOpacity
+                style={styles.rememberRow}
+                onPress={() => setRememberMe((v) => !v)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+                  {rememberMe && <Ionicons name="checkmark" size={12} color="#fff" />}
+                </View>
+                <Text style={styles.rememberText}>Beni hatırla</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => router.push({ pathname: "/auth/forgot-password", params: { email: email.trim() } })}
+              >
+                <Text style={styles.forgotText}>Şifremi unuttum</Text>
+              </TouchableOpacity>
+            </View>
 
             {/* Giriş Butonu */}
             <TouchableOpacity
@@ -275,29 +266,42 @@ function GoogleSignInButton({ googleAndroidClientId, googleIosClientId, googleWe
   const [started, setStarted] = useState(false);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    expoClientId: isExpoGo ? googleWebClientId || undefined : undefined,
     androidClientId: googleAndroidClientId || undefined,
     iosClientId: googleIosClientId || undefined,
     webClientId: googleWebClientId || undefined,
+    scopes: ["profile", "email"],
   });
 
   useEffect(() => {
-    if (!started) return;
-    if (response?.type !== "success") {
-      if (response?.type === "cancel" || response?.type === "dismiss") {
-        setStarted(false);
-        setBusy(false);
-      }
+    if (!started || !response) return;
+
+    if (response.type === "cancel" || response.type === "dismiss") {
+      setStarted(false);
+      setBusy(false);
       return;
     }
+
+    if (response.type === "error") {
+      showToast("Google girişi başarısız: " + (response.error?.message || "Bilinmeyen hata"));
+      setStarted(false);
+      setBusy(false);
+      return;
+    }
+
+    if (response.type !== "success") return;
+
     (async () => {
       try {
         const { idToken, accessToken } = response.authentication ?? {};
-        const credential = GoogleAuthProvider.credential(idToken ?? null, accessToken);
+        if (!idToken && !accessToken) {
+          showToast("Google token alınamadı. Lütfen tekrar deneyin.");
+          return;
+        }
+        const credential = GoogleAuthProvider.credential(idToken ?? null, accessToken ?? null);
         await signInWithCredential(auth!, credential);
         router.replace("/mytrip");
-      } catch {
-        showToast("Google ile giriş başarısız oldu.");
+      } catch (e: any) {
+        showToast("Google ile giriş başarısız: " + (e?.message || "Tekrar deneyin."));
       } finally {
         setStarted(false);
         setBusy(false);
@@ -307,14 +311,18 @@ function GoogleSignInButton({ googleAndroidClientId, googleIosClientId, googleWe
 
   return (
     <TouchableOpacity
-      style={styles.googleButton}
+      style={[styles.googleButton, (!request || busy) && { opacity: 0.6 }]}
       onPress={async () => {
-        if (!request) return;
+        if (!request) {
+          showToast("Google girişi yapılandırılmamış.");
+          return;
+        }
         setBusy(true);
         setStarted(true);
         try {
-          await promptAsync({ useProxy: isExpoGo });
-        } catch {
+          await promptAsync();
+        } catch (e: any) {
+          showToast("Google ile giriş açılamadı.");
           setBusy(false);
           setStarted(false);
         }
@@ -332,185 +340,35 @@ function GoogleSignInButton({ googleAndroidClientId, googleIosClientId, googleWe
 
 /* ─── Stiller ─── */
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#0A0F1E",
-  },
-  glowTopLeft: {
-    position: "absolute",
-    top: -100,
-    left: -80,
-    width: 350,
-    height: 350,
-    borderRadius: 175,
-    backgroundColor: "rgba(99,102,241,0.18)",
-  },
-  glowBottomRight: {
-    position: "absolute",
-    bottom: -100,
-    right: -80,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: "rgba(236,72,153,0.15)",
-  },
-  glowCenter: {
-    position: "absolute",
-    top: "40%",
-    left: "20%",
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: "rgba(59,130,246,0.08)",
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 40,
-  },
-  logoSection: {
-    alignItems: "center",
-    marginBottom: 32,
-  },
-  logoCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: "rgba(99,102,241,0.9)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-    shadowColor: "#6366F1",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  appName: {
-    fontFamily: "outfit-bold",
-    fontSize: 26,
-    color: "#FFFFFF",
-    letterSpacing: 0.5,
-  },
-  appTagline: {
-    fontFamily: "outfit",
-    fontSize: 14,
-    color: "#9CA3AF",
-    marginTop: 4,
-  },
-  card: {
-    backgroundColor: "rgba(255,255,255,0.04)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    borderRadius: 24,
-    padding: 24,
-  },
-  title: {
-    fontFamily: "outfit-bold",
-    fontSize: 26,
-    color: "#FFFFFF",
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontFamily: "outfit",
-    fontSize: 14,
-    color: "#9CA3AF",
-    marginBottom: 24,
-    lineHeight: 20,
-  },
-  googleButton: {
-    height: 50,
-    borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-  },
-  googleButtonText: {
-    color: "#FFFFFF",
-    fontFamily: "outfit-medium",
-    fontSize: 15,
-  },
-  orRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 18,
-  },
-  orLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.10)",
-  },
-  orText: {
-    marginHorizontal: 12,
-    color: "#6B7280",
-    fontFamily: "outfit",
-    fontSize: 13,
-  },
-  inputWrapper: {
-    height: 52,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "rgba(255,255,255,0.05)",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    marginBottom: 12,
-    gap: 10,
-  },
-  inputWrapperFocused: {
-    borderColor: "#818CF8",
-    backgroundColor: "rgba(129,140,248,0.08)",
-  },
-  input: {
-    flex: 1,
-    color: "#FFFFFF",
-    fontFamily: "outfit",
-    fontSize: 15,
-  },
-  forgotText: {
-    color: "#818CF8",
-    fontFamily: "outfit-medium",
-    fontSize: 13,
-  },
-  primaryButton: {
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: "#6366F1",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    shadowColor: "#6366F1",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  primaryButtonText: {
-    color: "#FFFFFF",
-    fontFamily: "outfit-bold",
-    fontSize: 16,
-  },
-  bottomRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 24,
-  },
-  bottomMuted: {
-    color: "#6B7280",
-    fontFamily: "outfit",
-    fontSize: 14,
-  },
-  bottomLink: {
-    color: "#818CF8",
-    fontFamily: "outfit-bold",
-    fontSize: 14,
-  },
+  screen: { flex: 1, backgroundColor: "#0A0F1E" },
+  glowTopLeft: { position: "absolute", top: -100, left: -80, width: 350, height: 350, borderRadius: 175, backgroundColor: "rgba(99,102,241,0.18)" },
+  glowBottomRight: { position: "absolute", bottom: -100, right: -80, width: 300, height: 300, borderRadius: 150, backgroundColor: "rgba(236,72,153,0.15)" },
+  glowCenter: { position: "absolute", top: "40%", left: "20%", width: 200, height: 200, borderRadius: 100, backgroundColor: "rgba(59,130,246,0.08)" },
+  scrollContent: { flexGrow: 1, justifyContent: "center", paddingHorizontal: 20, paddingVertical: 40 },
+  logoSection: { alignItems: "center", marginBottom: 32 },
+  logoCircle: { width: 68, height: 68, borderRadius: 34, backgroundColor: "rgba(99,102,241,0.9)", alignItems: "center", justifyContent: "center", marginBottom: 12, shadowColor: "#6366F1", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.5, shadowRadius: 12, elevation: 8 },
+  appName: { fontFamily: "outfit-bold", fontSize: 26, color: "#FFFFFF", letterSpacing: 0.5 },
+  appTagline: { fontFamily: "outfit", fontSize: 14, color: "#9CA3AF", marginTop: 4 },
+  card: { backgroundColor: "rgba(255,255,255,0.04)", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", borderRadius: 24, padding: 24 },
+  title: { fontFamily: "outfit-bold", fontSize: 26, color: "#FFFFFF", marginBottom: 6 },
+  subtitle: { fontFamily: "outfit", fontSize: 14, color: "#9CA3AF", marginBottom: 24, lineHeight: 20 },
+  googleButton: { height: 50, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.15)", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
+  googleButtonText: { color: "#FFFFFF", fontFamily: "outfit-medium", fontSize: 15 },
+  orRow: { flexDirection: "row", alignItems: "center", marginVertical: 18 },
+  orLine: { flex: 1, height: 1, backgroundColor: "rgba(255,255,255,0.10)" },
+  orText: { marginHorizontal: 12, color: "#6B7280", fontFamily: "outfit", fontSize: 13 },
+  inputWrapper: { height: 52, borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", backgroundColor: "rgba(255,255,255,0.05)", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, marginBottom: 12, gap: 10 },
+  inputWrapperFocused: { borderColor: "#818CF8", backgroundColor: "rgba(129,140,248,0.08)" },
+  input: { flex: 1, color: "#FFFFFF", fontFamily: "outfit", fontSize: 15 },
+  rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 },
+  rememberRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  checkbox: { width: 20, height: 20, borderRadius: 6, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.3)", backgroundColor: "rgba(255,255,255,0.05)", alignItems: "center", justifyContent: "center" },
+  checkboxChecked: { backgroundColor: "#6366F1", borderColor: "#6366F1" },
+  rememberText: { color: "#9CA3AF", fontFamily: "outfit", fontSize: 13 },
+  forgotText: { color: "#818CF8", fontFamily: "outfit-medium", fontSize: 13 },
+  primaryButton: { height: 52, borderRadius: 14, backgroundColor: "#6366F1", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, shadowColor: "#6366F1", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 6 },
+  primaryButtonText: { color: "#FFFFFF", fontFamily: "outfit-bold", fontSize: 16 },
+  bottomRow: { flexDirection: "row", justifyContent: "center", alignItems: "center", marginTop: 24 },
+  bottomMuted: { color: "#6B7280", fontFamily: "outfit", fontSize: 14 },
+  bottomLink: { color: "#818CF8", fontFamily: "outfit-bold", fontSize: 14 },
 });
