@@ -1,13 +1,6 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import * as Google from "expo-auth-session/providers/google";
-import Constants from "expo-constants";
 import { useNavigation, useRouter } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
-import {
-  GoogleAuthProvider,
-  signInWithCredential,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
@@ -25,9 +18,6 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth, firebaseInitError } from "./../../../configs/FirebaseConfig";
 import { getFirebaseAuthInitErrorMessage } from "./../../../configs/FirebaseMessages";
-
-// Google OAuth oturumu tamamlama — ZORUNLU
-WebBrowser.maybeCompleteAuthSession();
 
 const REMEMBER_EMAIL_KEY = "yolarkadasim_remember_email";
 
@@ -70,24 +60,6 @@ export default function SignIn() {
     });
   }, [navigation, fadeAnim, slideAnim]);
 
-  const appExtra = Constants.expoConfig?.extra || {};
-  const googleAndroidClientId =
-    process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || appExtra.googleAndroidClientId || "";
-  const googleIosClientId =
-    process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || appExtra.googleIosClientId || "";
-  const googleWebClientId =
-    process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || appExtra.googleWebClientId || "";
-  const isExpoGo = Constants.appOwnership === "expo";
-
-  const effectiveAndroidClientId = googleAndroidClientId || googleWebClientId;
-  const effectiveIosClientId = googleIosClientId || googleWebClientId;
-  const hasGoogleClientId =
-    Platform.OS === "android"
-      ? Boolean(effectiveAndroidClientId)
-      : Platform.OS === "ios"
-        ? Boolean(effectiveIosClientId)
-        : Boolean(googleWebClientId);
-
   const onSignIn = async () => {
     if (!auth) {
       showToast(getFirebaseAuthInitErrorMessage(firebaseInitError));
@@ -103,7 +75,6 @@ export default function SignIn() {
     try {
       await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
 
-      // Beni hatırla
       if (rememberMe) {
         await AsyncStorage.setItem(REMEMBER_EMAIL_KEY, trimmedEmail);
       } else {
@@ -154,25 +125,6 @@ export default function SignIn() {
           <View style={styles.card}>
             <Text style={styles.title}>Tekrar hoş geldin 👋</Text>
             <Text style={styles.subtitle}>Hesabına giriş yap ve yolculuğuna devam et</Text>
-
-            {/* Google Butonu */}
-            {hasGoogleClientId && (
-              <GoogleSignInButton
-                googleAndroidClientId={effectiveAndroidClientId}
-                googleIosClientId={effectiveIosClientId}
-                googleWebClientId={googleWebClientId}
-                isExpoGo={isExpoGo}
-                router={router}
-              />
-            )}
-
-            {hasGoogleClientId && (
-              <View style={styles.orRow}>
-                <View style={styles.orLine} />
-                <Text style={styles.orText}>veya e-posta ile</Text>
-                <View style={styles.orLine} />
-              </View>
-            )}
 
             {/* E-posta */}
             <View style={[styles.inputWrapper, emailFocused && styles.inputWrapperFocused]}>
@@ -260,85 +212,6 @@ export default function SignIn() {
   );
 }
 
-/* ─── Google Sign-In ─── */
-function GoogleSignInButton({ googleAndroidClientId, googleIosClientId, googleWebClientId, isExpoGo, router }) {
-  const [busy, setBusy] = useState(false);
-  const [started, setStarted] = useState(false);
-
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: googleAndroidClientId || undefined,
-    iosClientId: googleIosClientId || undefined,
-    webClientId: googleWebClientId || undefined,
-    scopes: ["profile", "email"],
-  });
-
-  useEffect(() => {
-    if (!started || !response) return;
-
-    if (response.type === "cancel" || response.type === "dismiss") {
-      setStarted(false);
-      setBusy(false);
-      return;
-    }
-
-    if (response.type === "error") {
-      showToast("Google girişi başarısız: " + (response.error?.message || "Bilinmeyen hata"));
-      setStarted(false);
-      setBusy(false);
-      return;
-    }
-
-    if (response.type !== "success") return;
-
-    (async () => {
-      try {
-        const { idToken, accessToken } = response.authentication ?? {};
-        if (!idToken && !accessToken) {
-          showToast("Google token alınamadı. Lütfen tekrar deneyin.");
-          return;
-        }
-        const credential = GoogleAuthProvider.credential(idToken ?? null, accessToken ?? null);
-        await signInWithCredential(auth!, credential);
-        router.replace("/mytrip");
-      } catch (e: any) {
-        showToast("Google ile giriş başarısız: " + (e?.message || "Tekrar deneyin."));
-      } finally {
-        setStarted(false);
-        setBusy(false);
-      }
-    })();
-  }, [started, response, router]);
-
-  return (
-    <TouchableOpacity
-      style={[styles.googleButton, (!request || busy) && { opacity: 0.6 }]}
-      onPress={async () => {
-        if (!request) {
-          showToast("Google girişi yapılandırılmamış.");
-          return;
-        }
-        setBusy(true);
-        setStarted(true);
-        try {
-          await promptAsync();
-        } catch (e: any) {
-          showToast("Google ile giriş açılamadı.");
-          setBusy(false);
-          setStarted(false);
-        }
-      }}
-      disabled={!request || busy}
-      activeOpacity={0.85}
-    >
-      <Ionicons name="logo-google" size={18} color="#fff" />
-      <Text style={styles.googleButtonText}>
-        {busy ? "Bekleniyor..." : "Google ile Devam Et"}
-      </Text>
-    </TouchableOpacity>
-  );
-}
-
-/* ─── Stiller ─── */
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#0A0F1E" },
   glowTopLeft: { position: "absolute", top: -100, left: -80, width: 350, height: 350, borderRadius: 175, backgroundColor: "rgba(99,102,241,0.18)" },
@@ -352,11 +225,6 @@ const styles = StyleSheet.create({
   card: { backgroundColor: "rgba(255,255,255,0.04)", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", borderRadius: 24, padding: 24 },
   title: { fontFamily: "outfit-bold", fontSize: 26, color: "#FFFFFF", marginBottom: 6 },
   subtitle: { fontFamily: "outfit", fontSize: 14, color: "#9CA3AF", marginBottom: 24, lineHeight: 20 },
-  googleButton: { height: 50, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.15)", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
-  googleButtonText: { color: "#FFFFFF", fontFamily: "outfit-medium", fontSize: 15 },
-  orRow: { flexDirection: "row", alignItems: "center", marginVertical: 18 },
-  orLine: { flex: 1, height: 1, backgroundColor: "rgba(255,255,255,0.10)" },
-  orText: { marginHorizontal: 12, color: "#6B7280", fontFamily: "outfit", fontSize: 13 },
   inputWrapper: { height: 52, borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", backgroundColor: "rgba(255,255,255,0.05)", flexDirection: "row", alignItems: "center", paddingHorizontal: 14, marginBottom: 12, gap: 10 },
   inputWrapperFocused: { borderColor: "#818CF8", backgroundColor: "rgba(129,140,248,0.08)" },
   input: { flex: 1, color: "#FFFFFF", fontFamily: "outfit", fontSize: 15 },
