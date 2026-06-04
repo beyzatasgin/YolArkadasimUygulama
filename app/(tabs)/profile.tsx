@@ -192,11 +192,30 @@ export default function Profile() {
 
   const uploadPhoto = async (uri: string): Promise<string> => {
     if (!storage || !auth?.currentUser) throw new Error("Storage yok");
-    const resp = await fetch(uri);
-    const blob = await resp.blob();
+
+    // React Native'de fetch().blob() yerine XMLHttpRequest daha güvenilir
+    const blob: Blob = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = () => resolve(xhr.response);
+      xhr.onerror = () => reject(new Error("Blob oluşturulamadı"));
+      xhr.responseType = "blob";
+      xhr.open("GET", uri, true);
+      xhr.send(null);
+    });
+
     const photoRef = ref(storage, `profile-photos/${auth.currentUser.uid}/${Date.now()}.jpg`);
-    await uploadBytes(photoRef, blob);
-    return getDownloadURL(photoRef);
+    await uploadBytes(photoRef, blob, { contentType: "image/jpeg" });
+
+    // getDownloadURL bazen gecikebilir, 3 kez dene
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        return await getDownloadURL(photoRef);
+      } catch (e) {
+        if (attempt === 3) throw e;
+        await new Promise(r => setTimeout(r, attempt * 800));
+      }
+    }
+    throw new Error("URL alınamadı");
   };
 
   const handleSaveProfile = async () => {
