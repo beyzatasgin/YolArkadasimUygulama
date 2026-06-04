@@ -206,13 +206,14 @@ export default function Profile() {
     setSaving(true);
     try {
       let finalPhoto = photoUri;
+      let photoFailed = false;
       const isNew = localPhotoUri &&
         !localPhotoUri.startsWith("http://") &&
         !localPhotoUri.startsWith("https://");
       if (isNew) {
         setUploadingPhoto(true);
         try { finalPhoto = await uploadPhoto(localPhotoUri!); }
-        catch (e: any) { Alert.alert("Uyarı", "Fotoğraf yüklenemedi ama isim güncellendi."); }
+        catch (e: any) { photoFailed = true; }
         finally { setUploadingPhoto(false); }
       }
       await updateProfile(auth.currentUser, {
@@ -224,7 +225,11 @@ export default function Profile() {
       if (finalPhoto) setPhotoUri(finalPhoto);
       setLocalPhotoUri(null);
       setEditModalVisible(false);
-      Alert.alert("✅ Kaydedildi", "Profilin güncellendi.");
+      if (photoFailed) {
+        Alert.alert("Uyarı", "Fotoğraf yüklenemedi ama isim güncellendi.");
+      } else {
+        Alert.alert("✅ Kaydedildi", "Profilin güncellendi.");
+      }
     } catch (e: any) {
       Alert.alert("Hata", e.code === "auth/requires-recent-login"
         ? "Güvenlik nedeniyle tekrar giriş yap."
