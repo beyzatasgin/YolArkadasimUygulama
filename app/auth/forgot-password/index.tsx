@@ -3,6 +3,7 @@ import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
   KeyboardAvoidingView,
   Platform,
@@ -14,6 +15,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+const showToast = (msg: string) => {
+  if (Platform.OS === "android") {
+    ToastAndroid.show(msg, ToastAndroid.LONG);
+  } else {
+    Alert.alert("", msg);
+  }
+};
 import { auth, firebaseInitError } from "../../../configs/FirebaseConfig";
 import { getFirebaseAuthInitErrorMessage } from "../../../configs/FirebaseMessages";
 
@@ -53,14 +62,13 @@ export default function ForgotPassword() {
 
   const handleResetPassword = async () => {
     if (!auth) {
-      const initMessage = getFirebaseAuthInitErrorMessage(firebaseInitError);
-      ToastAndroid.show(initMessage, ToastAndroid.LONG);
+      showToast(getFirebaseAuthInitErrorMessage(firebaseInitError));
       return;
     }
 
     const normalizedEmail = email?.trim().toLowerCase();
     if (!normalizedEmail) {
-      ToastAndroid.show("Lütfen e-posta adresinizi girin", ToastAndroid.LONG);
+      showToast("Lütfen e-posta adresinizi girin");
       return;
     }
 
@@ -68,23 +76,14 @@ export default function ForgotPassword() {
     try {
       await sendPasswordResetEmail(auth, normalizedEmail);
       setSuccess(true);
-    } catch (error) {
+    } catch (error: any) {
       const code = error?.code;
-      if (code === "auth/user-not-found") {
-        ToastAndroid.show(
-          "Bu e-posta ile kayıtlı kullanıcı bulunamadı.",
-          ToastAndroid.LONG,
-        );
+      if (code === "auth/user-not-found" || code === "auth/invalid-credential") {
+        showToast("Bu e-posta ile kayıtlı kullanıcı bulunamadı.");
       } else if (code === "auth/invalid-email") {
-        ToastAndroid.show(
-          "Geçerli bir e-posta adresi girin.",
-          ToastAndroid.LONG,
-        );
+        showToast("Geçerli bir e-posta adresi girin.");
       } else {
-        ToastAndroid.show(
-          "Şifre sıfırlama işlemi başarısız oldu.",
-          ToastAndroid.LONG,
-        );
+        showToast("Şifre sıfırlama işlemi başarısız oldu.");
       }
     } finally {
       setLoading(false);
