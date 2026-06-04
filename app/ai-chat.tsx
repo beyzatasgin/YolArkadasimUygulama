@@ -21,8 +21,8 @@ import { sendChatMessage, type ChatMessage, type TripContext } from "../services
 const ACCENT = "#6366F1";
 const DARK_BG = "#0A0F1E";
 
-// Hızlı soru önerileri
-const QUICK_QUESTIONS = [
+// Seyahate özel hızlı sorular (tripContext varken kullanılır)
+const TRIP_QUICK_QUESTIONS = [
   "Vize gerekiyor mu?",
   "Para birimi nedir?",
   "En iyi gezi mevsimi hangisi?",
@@ -31,6 +31,18 @@ const QUICK_QUESTIONS = [
   "Yerel yemekler neler?",
   "Hava nasıl olur?",
   "Kaç gün yeterli?",
+];
+
+// Genel seyahat soruları (tripContext yokken kullanılır)
+const GENERAL_QUICK_QUESTIONS = [
+  "Avrupa'da vize nasıl alınır?",
+  "Bütçe seyahat için öneriler?",
+  "Seyahat sigortası gerekli mi?",
+  "Seyahat uygulamaları neler?",
+  "Bavul nasıl hazırlanır?",
+  "En ucuz uçuş nasıl bulunur?",
+  "Yalnız seyahat güvenli mi?",
+  "Döviz nereden bozulur?",
 ];
 
 export default function AiChat() {
@@ -246,9 +258,10 @@ export default function AiChat() {
           </View>
           <View>
             <Text style={styles.headerTitle}>AI Seyahat Asistanı</Text>
-            {tripContext?.placeName && (
-              <Text style={styles.headerSub}>📍 {tripContext.placeName}</Text>
-            )}
+            {tripContext?.placeName
+              ? <Text style={styles.headerSub}>📍 {tripContext.placeName}</Text>
+              : <Text style={styles.headerSub}>Genel seyahat danışmanı</Text>
+            }
           </View>
         </View>
 
@@ -298,7 +311,7 @@ export default function AiChat() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
           >
-            {QUICK_QUESTIONS.map((q) => (
+            {(tripContext?.placeName ? TRIP_QUICK_QUESTIONS : GENERAL_QUICK_QUESTIONS).map((q) => (
               <TouchableOpacity
                 key={q}
                 onPress={() => handleSend(q)}
