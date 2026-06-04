@@ -1,23 +1,45 @@
+import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
+// Expo Go'da remote push token kaydı SDK 53'ten itibaren desteklenmiyor.
+// Yerel (zamanlanmış) bildirimler her ortamda çalışır.
+const isExpoGo =
+  Constants.executionEnvironment === "storeClient" ||
+  (Constants.appOwnership != null && Constants.appOwnership === "expo");
+
 // Bildirim gösterim ayarı — uygulama ön plandayken de banner göster
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+if (!isExpoGo) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+} else {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: false,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 /** Kullanıcıdan bildirim izni ister. Daha önce verildiyse tekrar sormaz. */
 export async function requestNotificationPermission(): Promise<boolean> {
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  if (existingStatus === "granted") return true;
-  const { status } = await Notifications.requestPermissionsAsync();
-  return status === "granted";
+  try {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    if (existingStatus === "granted") return true;
+    const { status } = await Notifications.requestPermissionsAsync();
+    return status === "granted";
+  } catch {
+    // Expo Go'da bazı izin çağrıları hata fırlatabilir, sessizce geç
+    return false;
+  }
 }
 
 /**
@@ -31,6 +53,9 @@ export async function scheduleTripNotifications(params: {
   placeName: string;
   startDate: Date;
 }): Promise<string[]> {
+  // Expo Go'da yerel bildirim zamanlaması da kısıtlı — sessizce atla
+  if (isExpoGo) return [];
+
   const hasPermission = await requestNotificationPermission();
   if (!hasPermission) return [];
 
