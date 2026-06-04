@@ -2,14 +2,23 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Yalnızca giriş yapmış kullanıcı kendi verilerine erişebilir
     function isOwner(userId) {
       return request.auth != null && request.auth.uid == userId;
     }
 
-    // Seyahatler
+    // Seyahat paylaşım kontrolü:
+    // - Sahibi her zaman okuyup yazabilir
+    // - isPublic == true ise herkes okuyabilir (anonim dahil)
+    // - sharedWith listesinde e-postası olanlar okuyabilir
+    function canReadTrip(data) {
+      return isOwner(data.userId)
+          || data.isPublic == true
+          || (request.auth != null && request.auth.token.email in data.sharedWith);
+    }
+
     match /trips/{tripId} {
-      allow read, write: if isOwner(resource.data.userId);
+      allow read:   if canReadTrip(resource.data);
+      allow write:  if isOwner(resource.data.userId);
       allow create: if isOwner(request.resource.data.userId);
     }
 

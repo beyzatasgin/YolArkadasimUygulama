@@ -5,12 +5,14 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Clipboard,
   Image,
   Linking,
   Modal,
   ScrollView,
   Share,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -48,6 +50,11 @@ export default function TripDetailScreen() {
   const [error, setError] = useState(null);
   const [placeImageUrl, setPlaceImageUrl] = useState(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [isPublic, setIsPublic] = useState(false);
+  const [sharedWith, setSharedWith] = useState<string[]>([]);
+  const [friendEmail, setFriendEmail] = useState("");
+  const [addingFriend, setAddingFriend] = useState(false);
+  const [togglingPublic, setTogglingPublic] = useState(false);
   const [editTripName, setEditTripName] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
@@ -64,6 +71,75 @@ export default function TripDetailScreen() {
     centerLat,
     centerLon,
   );
+
+  const shareLink = `yolarkadasim://shared/${id}`;
+
+  const handleCopyLink = useCallback(() => {
+    Clipboard.setString(shareLink);
+    Alert.alert("Kopyalandı!", "Paylaşım linki panoya kopyalandı.");
+  }, [shareLink]);
+
+  const handleShareLink = useCallback(async () => {
+    try {
+      await Share.share({
+        message: `✈️ "${trip?.tripName || trip?.selectedPlace?.name}" seyahat planıma göz at!\n\n${shareLink}`,
+      });
+    } catch {}
+  }, [trip, shareLink]);
+
+  const handleTogglePublic = useCallback(async (value: boolean) => {
+    setTogglingPublic(true);
+    try {
+      await updateDoc(doc(db, "trips", id as string), { isPublic: value });
+      setIsPublic(value);
+    } catch {
+      Alert.alert("Hata", "Ayar kaydedilemedi.");
+    } finally {
+      setTogglingPublic(false);
+    }
+  }, [id]);
+
+  const handleAddFriend = useCallback(async () => {
+    const email = friendEmail.trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      Alert.alert("Geçersiz e-posta", "Lütfen geçerli bir e-posta adresi girin.");
+      return;
+    }
+    if (sharedWith.includes(email)) {
+      Alert.alert("Zaten eklendi", "Bu e-posta zaten listede mevcut.");
+      return;
+    }
+    setAddingFriend(true);
+    try {
+      const updated = [...sharedWith, email];
+      await updateDoc(doc(db, "trips", id as string), { sharedWith: updated });
+      setSharedWith(updated);
+      setFriendEmail("");
+      Alert.alert("Eklendi ✓", `${email} artık bu seyahati görebilir.`);
+    } catch {
+      Alert.alert("Hata", "Arkadaş eklenirken bir sorun oluştu.");
+    } finally {
+      setAddingFriend(false);
+    }
+  }, [friendEmail, sharedWith, id]);
+
+  const handleRemoveFriend = useCallback((email: string) => {
+    Alert.alert("Erişimi Kaldır", `${email} kullanıcısının erişimi kaldırılsın mı?`, [
+      { text: "İptal", style: "cancel" },
+      {
+        text: "Kaldır", style: "destructive",
+        onPress: async () => {
+          try {
+            const updated = sharedWith.filter(e => e !== email);
+            await updateDoc(doc(db, "trips", id as string), { sharedWith: updated });
+            setSharedWith(updated);
+          } catch {
+            Alert.alert("Hata", "İşlem tamamlanamadı.");
+          }
+        },
+      },
+    ]);
+  }, [sharedWith, id]);
 
   const handleDeleteTrip = useCallback(async () => {
     Alert.alert(
@@ -284,6 +360,8 @@ export default function TripDetailScreen() {
       };
 
       setTrip(tripData);
+      setIsPublic(!!data.isPublic);
+      setSharedWith(Array.isArray(data.sharedWith) ? data.sharedWith : []);
 
       if (tripData.selectedPlace?.name) {
         const imageUrl = getPlaceImageUrl(tripData.selectedPlace.name);
@@ -850,6 +928,88 @@ export default function TripDetailScreen() {
             </InfoCard>
           )}
 
+          {/* ── Paylaş & Arkadaşlar ────────────────────────── */}
+          <InfoCard
+            iconName="share-social"
+            iconColor="#6366F1"
+            iconBg="#EEF2FF"
+            title="Paylaş & Arkadaşlar"
+          >
+            {/* Herkese Açık toggle */}
+            <View style={styles.shareRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.shareRowLabel}>Herkese Açık Link</Text>
+                <Text style={styles.shareRowSub}>Açıksa linki olan herkes bu seyahati görebilir</Text>
+              </View>
+              {togglingPublic
+                ? <ActivityIndicator size="small" color={ACCENT} />
+                : <Switch
+                    value={isPublic}
+                    onValueChange={handleTogglePublic}
+                    trackColor={{ false: "#E5E7EB", true: ACCENT + "99" }}
+                    thumbColor={isPublic ? ACCENT : "#fff"}
+                  />
+              }
+            </View>
+
+            {/* Link kopyala / paylaş butonları */}
+            {isPublic && (
+              <View style={styles.linkBox}>
+                <Text style={styles.linkText} numberOfLines={1}>{shareLink}</Text>
+                <View style={styles.linkBtns}>
+                  <TouchableOpacity style={styles.linkBtn} onPress={handleCopyLink}>
+                    <Ionicons name="copy-outline" size={16} color={ACCENT} />
+                    <Text style={styles.linkBtnText}>Kopyala</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.linkBtn, { backgroundColor: ACCENT }]} onPress={handleShareLink}>
+                    <Ionicons name="share-outline" size={16} color="#fff" />
+                    <Text style={[styles.linkBtnText, { color: "#fff" }]}>Paylaş</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
+            {/* Arkadaş ekle */}
+            <View style={{ marginTop: 14, gap: 8 }}>
+              <Text style={styles.shareRowLabel}>Belirli Kişilerle Paylaş</Text>
+              <Text style={styles.shareRowSub}>E-posta adresi eklenen kullanıcılar uygulamada bu seyahati görebilir</Text>
+              <View style={styles.emailRow}>
+                <TextInput
+                  value={friendEmail}
+                  onChangeText={setFriendEmail}
+                  placeholder="ornek@email.com"
+                  placeholderTextColor={TEXT_MUTED}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  style={styles.emailInput}
+                />
+                <TouchableOpacity
+                  onPress={handleAddFriend}
+                  disabled={addingFriend}
+                  style={styles.emailAddBtn}
+                >
+                  {addingFriend
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <Ionicons name="person-add-outline" size={18} color="#fff" />
+                  }
+                </TouchableOpacity>
+              </View>
+
+              {/* Eklenen arkadaşlar listesi */}
+              {sharedWith.map((email) => (
+                <View key={email} style={styles.friendRow}>
+                  <View style={styles.friendAvatar}>
+                    <Text style={styles.friendAvatarText}>{email[0].toUpperCase()}</Text>
+                  </View>
+                  <Text style={styles.friendEmail} numberOfLines={1}>{email}</Text>
+                  <TouchableOpacity onPress={() => handleRemoveFriend(email)}>
+                    <Ionicons name="close-circle" size={20} color="#D1D5DB" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          </InfoCard>
+
           {/* ── Eşya Listesi ──────────────────────────────── */}
           {trip.aiPlan?.packingList && trip.aiPlan.packingList.length > 0 && (
             <InfoCard
@@ -1340,5 +1500,107 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "outfit",
     color: TEXT_MUTED,
+  },
+
+  /* Paylaş & Arkadaşlar */
+  shareRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 4,
+  },
+  shareRowLabel: {
+    fontFamily: "outfit-medium",
+    fontSize: 14,
+    color: TEXT_PRIMARY,
+  },
+  shareRowSub: {
+    fontFamily: "outfit",
+    fontSize: 12,
+    color: TEXT_MUTED,
+    marginTop: 2,
+  },
+  linkBox: {
+    backgroundColor: "#F8F9FF",
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#E0E7FF",
+    gap: 10,
+  },
+  linkText: {
+    fontFamily: "outfit",
+    fontSize: 12,
+    color: ACCENT,
+  },
+  linkBtns: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  linkBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#EEF2FF",
+  },
+  linkBtnText: {
+    fontFamily: "outfit-medium",
+    fontSize: 13,
+    color: ACCENT,
+  },
+  emailRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  emailInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontFamily: "outfit",
+    fontSize: 14,
+    color: TEXT_PRIMARY,
+    backgroundColor: "#fff",
+  },
+  emailAddBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: ACCENT,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  friendRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#F9FAFB",
+    borderRadius: 10,
+    padding: 10,
+  },
+  friendAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: ACCENT + "22",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  friendAvatarText: {
+    fontFamily: "outfit-bold",
+    fontSize: 14,
+    color: ACCENT,
+  },
+  friendEmail: {
+    fontFamily: "outfit",
+    fontSize: 13,
+    color: TEXT_PRIMARY,
+    flex: 1,
   },
 });

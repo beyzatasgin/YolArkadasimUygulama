@@ -4,6 +4,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
   query,
   where,
@@ -76,6 +77,7 @@ export default function Mytrip() {
   const [pastTrips, setPastTrips] = useState<TripListItem[]>([]);
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [sharedTrips, setSharedTrips] = useState<TripListItem[]>([]);
 
   // Takvim için renkli period işaretleri
   const markedDates = useMemo(() => {
@@ -356,6 +358,31 @@ export default function Mytrip() {
         fallbackUnsubscribe();
       }
     };
+  }, []);
+
+  // Benimle paylaşılan seyahatler (başkasının sharedWith listesinde e-posta var)
+  useEffect(() => {
+    const email = auth?.currentUser?.email;
+    if (!email || !db) return;
+    const q = query(
+      collection(db, "trips"),
+      where("sharedWith", "array-contains", email),
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const trips: TripListItem[] = [];
+      snap.forEach((d) => {
+        const data = d.data();
+        trips.push({
+          id: d.id,
+          ...data,
+          startDate: data.startDate?.toDate?.() ?? (data.startDate?.seconds ? new Date(data.startDate.seconds * 1000) : null),
+          endDate:   data.endDate?.toDate?.()   ?? (data.endDate?.seconds   ? new Date(data.endDate.seconds   * 1000) : null),
+          createdAt: data.createdAt?.toDate?.() ?? new Date(),
+        });
+      });
+      setSharedTrips(trips);
+    }, () => {});
+    return () => unsub();
   }, []);
 
   const formatDate = (date) => {
@@ -1141,6 +1168,53 @@ export default function Mytrip() {
               </View>
               {pastTrips.map((trip) => (
                 <View key={trip.id}>{renderTripCard({ item: trip })}</View>
+              ))}
+            </View>
+          )}
+          {/* Benimle Paylaşılan */}
+          {sharedTrips.length > 0 && (
+            <View style={{ marginBottom: 30 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 14, paddingLeft: 12, borderLeftWidth: 3, borderLeftColor: "#8B5CF6" }}>
+                <Ionicons name="people-outline" size={18} color="#8B5CF6" style={{ marginRight: 6 }} />
+                <Text style={{ fontFamily: "outfit-bold", fontSize: 18, color: TEXT_PRIMARY }}>
+                  Benimle Paylaşılan
+                </Text>
+              </View>
+              {sharedTrips.map((trip) => (
+                <TouchableOpacity
+                  key={trip.id}
+                  onPress={() => router.push(`/shared/${trip.id}`)}
+                  style={{
+                    backgroundColor: "#fff",
+                    borderRadius: 16,
+                    padding: 16,
+                    marginBottom: 12,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 14,
+                    borderLeftWidth: 4,
+                    borderLeftColor: "#8B5CF6",
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.06,
+                    shadowRadius: 6,
+                    elevation: 2,
+                  }}
+                >
+                  <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#F5F3FF", alignItems: "center", justifyContent: "center" }}>
+                    <Ionicons name="airplane-outline" size={22} color="#8B5CF6" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: "outfit-bold", fontSize: 15, color: TEXT_PRIMARY }} numberOfLines={1}>
+                      {trip.tripName || trip.selectedPlace?.name || "Seyahat"}
+                    </Text>
+                    <Text style={{ fontFamily: "outfit", fontSize: 12, color: TEXT_MUTED, marginTop: 2 }}>
+                      {trip.selectedPlace?.name}
+                      {trip.startDate ? ` • ${formatDate(trip.startDate)}` : ""}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={TEXT_MUTED} />
+                </TouchableOpacity>
               ))}
             </View>
           )}
