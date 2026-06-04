@@ -45,33 +45,29 @@ import {
 const ACCENT = "#6366F1";
 const ACCENT_LIGHT = "#EEF2FF";
 
-const quickActions = [
+const menuActions = [
   {
-    icon: "airplane",
-    label: "Seyahatlerim",
-    color: "#6366F1",
-    bg: "#EEF2FF",
-    target: "/mytrip",
-  },
-  {
-    icon: "bar-chart",
+    icon: "bar-chart-outline",
     label: "İstatistikler",
+    sub: "Seyahat istatistikleriniz",
     color: "#10B981",
     bg: "#ECFDF5",
     target: "/statistics",
   },
   {
-    icon: "heart",
+    icon: "heart-outline",
     label: "Kayıtlı Yerler",
+    sub: "Favori destinasyonlarınız",
     color: "#EC4899",
     bg: "#FDF2F8",
     target: "/saved-places",
   },
   {
-    icon: "shield-checkmark",
+    icon: "shield-checkmark-outline",
     label: "Gizlilik",
-    color: "#10B981",
-    bg: "#ECFDF5",
+    sub: "Gizlilik ve güvenlik ayarları",
+    color: "#6366F1",
+    bg: "#EEF2FF",
     target: "/privacy",
   },
 ];
@@ -352,29 +348,29 @@ export default function Profile() {
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── HIZLI ERİŞİM ── */}
-        <Text style={styles.sectionTitle}>Hızlı Erişim</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.quickGrid, { paddingHorizontal: 20 }]}
-        >
-          {quickActions.map((item) => (
-            <TouchableOpacity
-              key={item.label}
-              onPress={() => router.push(item.target as any)}
-              style={[styles.quickCard, { backgroundColor: item.bg, width: 90 }]}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.quickIcon, { backgroundColor: item.color }]}>
-                <Ionicons name={item.icon as any} size={20} color="#fff" />
-              </View>
-              <Text style={[styles.quickLabel, { color: item.color }]}>
-                {item.label}
-              </Text>
-            </TouchableOpacity>
+        {/* ── MENÜ ── */}
+        <Text style={styles.sectionTitle}>Menü</Text>
+        <View style={styles.menuCard}>
+          {menuActions.map((item, index) => (
+            <View key={item.label}>
+              {index > 0 && <View style={styles.menuDivider} />}
+              <TouchableOpacity
+                onPress={() => router.push(item.target as any)}
+                style={styles.menuRow}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.menuIcon, { backgroundColor: item.bg }]}>
+                  <Ionicons name={item.icon as any} size={18} color={item.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.menuTitle}>{item.label}</Text>
+                  <Text style={styles.menuSub}>{item.sub}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#D1D5DB" />
+              </TouchableOpacity>
+            </View>
           ))}
-        </ScrollView>
+        </View>
 
         {/* ── YAKLAŞAN SEYAHATLER ── */}
         {upcomingTrips.length > 0 && (
@@ -688,29 +684,21 @@ const styles = StyleSheet.create({
   },
   seeAll: { fontFamily: "outfit-medium", fontSize: 13, color: ACCENT },
 
-  /* Quick Grid */
-  quickGrid: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  quickCard: {
-    flex: 1,
+  menuCard: {
+    marginHorizontal: 20,
+    backgroundColor: "#fff",
     borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: "center",
-    gap: 8,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  quickIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  quickLabel: {
-    fontFamily: "outfit-medium",
-    fontSize: 12,
-    textAlign: "center",
+  menuDivider: {
+    height: 1,
+    backgroundColor: "#F3F4F6",
+    marginHorizontal: 16,
   },
 
   /* Trip Card */
