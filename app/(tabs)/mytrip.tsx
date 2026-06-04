@@ -1049,61 +1049,29 @@ export default function Mytrip() {
                           </View>
                         )}
 
-                        <View style={{ flexDirection: "row", gap: 10 }}>
-                          <TouchableOpacity
-                            onPress={() => router.push(`/trip-detail/${nextTrip.id}`)}
+                        <TouchableOpacity
+                          onPress={() => router.push(`/trip-detail/${nextTrip.id}`)}
+                          style={{
+                            backgroundColor: "#FFFFFF",
+                            paddingVertical: 11,
+                            borderRadius: 12,
+                            alignItems: "center",
+                            flexDirection: "row",
+                            justifyContent: "center",
+                            gap: 6,
+                          }}
+                        >
+                          <Ionicons name="eye-outline" size={16} color={INDIGO} />
+                          <Text
                             style={{
-                              flex: 1,
-                              backgroundColor: "#FFFFFF",
-                              paddingVertical: 11,
-                              borderRadius: 12,
-                              alignItems: "center",
-                              flexDirection: "row",
-                              justifyContent: "center",
-                              gap: 6,
+                              fontFamily: "outfit-medium",
+                              fontSize: 14,
+                              color: INDIGO,
                             }}
                           >
-                            <Ionicons name="eye-outline" size={16} color={INDIGO} />
-                            <Text
-                              style={{
-                                fontFamily: "outfit-medium",
-                                fontSize: 14,
-                                color: INDIGO,
-                              }}
-                            >
-                              Detayları Gör
-                            </Text>
-                          </TouchableOpacity>
-
-                          {nextTrip.aiPlan && (
-                            <TouchableOpacity
-                              onPress={() => router.push(`/trip-detail/${nextTrip.id}`)}
-                              style={{
-                                flex: 1,
-                                backgroundColor: "rgba(255,255,255,0.15)",
-                                paddingVertical: 11,
-                                borderRadius: 12,
-                                alignItems: "center",
-                                flexDirection: "row",
-                                justifyContent: "center",
-                                gap: 6,
-                                borderWidth: 1,
-                                borderColor: "rgba(255,255,255,0.25)",
-                              }}
-                            >
-                              <Ionicons name="sparkles" size={16} color="#FFFFFF" />
-                              <Text
-                                style={{
-                                  fontFamily: "outfit-medium",
-                                  fontSize: 14,
-                                  color: "#FFFFFF",
-                                }}
-                              >
-                                AI Planı
-                              </Text>
-                            </TouchableOpacity>
-                          )}
-                        </View>
+                            Detayları Gör
+                          </Text>
+                        </TouchableOpacity>
                       </View>
                     </ImageBackground>
                   </TouchableOpacity>
