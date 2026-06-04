@@ -30,6 +30,7 @@ import { cancelTripNotifications } from "../../services/notificationService";
 import { regenerateTripPlan, type AlternativePlanModifier } from "../../services/tripPlanService";
 import { getPlaceImageUrl as getPlaceImage } from "../../utils/imageHelper";
 import { Colors } from "../../constants/Colors";
+import type { SavedTrip } from "../../types/trip";
 import { getInterestLabel } from "../../constants/tripPreferences";
 import { useCreateTrip } from "../../hooks/useCreateTrip";
 
@@ -47,10 +48,10 @@ export default function TripDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { setTripData } = useCreateTrip();
-  const [trip, setTrip] = useState(null);
+  const [trip, setTrip] = useState<SavedTrip | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [placeImageUrl, setPlaceImageUrl] = useState(null);
+  const [error, setError] = useState<string | null>(null);
+  const [placeImageUrl, setPlaceImageUrl] = useState<string | null>(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [isPublic, setIsPublic] = useState(false);
   const [sharedWith, setSharedWith] = useState<string[]>([]);
@@ -95,7 +96,7 @@ export default function TripDetailScreen() {
   const handleTogglePublic = useCallback(async (value: boolean) => {
     setTogglingPublic(true);
     try {
-      await updateDoc(doc(db, "trips", id as string), { isPublic: value });
+      await updateDoc(doc(db!, "trips", id as string), { isPublic: value });
       setIsPublic(value);
     } catch {
       Alert.alert("Hata", "Ayar kaydedilemedi.");
@@ -117,7 +118,7 @@ export default function TripDetailScreen() {
     setAddingFriend(true);
     try {
       const updated = [...sharedWith, email];
-      await updateDoc(doc(db, "trips", id as string), { sharedWith: updated });
+      await updateDoc(doc(db!, "trips", id as string), { sharedWith: updated });
       setSharedWith(updated);
       setFriendEmail("");
       Alert.alert("Eklendi ✓", `${email} artık bu seyahati görebilir.`);
@@ -136,7 +137,7 @@ export default function TripDetailScreen() {
         onPress: async () => {
           try {
             const updated = sharedWith.filter(e => e !== email);
-            await updateDoc(doc(db, "trips", id as string), { sharedWith: updated });
+            await updateDoc(doc(db!, "trips", id as string), { sharedWith: updated });
             setSharedWith(updated);
           } catch {
             Alert.alert("Hata", "İşlem tamamlanamadı.");
@@ -157,7 +158,7 @@ export default function TripDetailScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await deleteDoc(doc(db, "trips", id as string));
+              await deleteDoc(doc(db!, "trips", id as string));
               await cancelTripNotifications(id as string).catch(() => {});
               Alert.alert("Başarılı", "Seyahat başarıyla silindi.", [
                 { text: "Tamam", onPress: () => router.back() },
@@ -182,7 +183,7 @@ export default function TripDetailScreen() {
   const handleShareTrip = useCallback(async () => {
     if (!trip) return;
 
-    const formatDate = (date: Date | null) => {
+    const formatDate = (date: Date | string | null) => {
       if (!date) return "?";
       return new Date(date).toLocaleDateString("tr-TR", {
         day: "numeric",
@@ -234,15 +235,15 @@ export default function TripDetailScreen() {
     }
     setSavingEdit(true);
     try {
-      await updateDoc(doc(db, "trips", id as string), {
+      await updateDoc(doc(db!, "trips", id as string), {
         tripName: editTripName.trim(),
         notes: editNotes.trim(),
       });
-      setTrip((prev) => ({
+      setTrip((prev) => prev ? ({
         ...prev,
         tripName: editTripName.trim(),
         notes: editNotes.trim(),
-      }));
+      }) : null);
       setEditModalVisible(false);
       Alert.alert("Kaydedildi", "Seyahat bilgileri güncellendi.");
     } catch (err) {
@@ -276,8 +277,8 @@ export default function TripDetailScreen() {
                   interests: trip.interests || [],
                 };
                 const newPlan = await regenerateTripPlan(tripDataForRegen as any, modifier);
-                await updateDoc(doc(db, "trips", id as string), { aiPlan: newPlan });
-                setTrip((prev) => ({ ...prev, aiPlan: newPlan }));
+                await updateDoc(doc(db!, "trips", id as string), { aiPlan: newPlan });
+                setTrip((prev) => prev ? ({ ...prev, aiPlan: newPlan }) : null);
                 Alert.alert("Tamamlandı", "Yeni plan oluşturuldu!");
               } catch (err: any) {
                 Alert.alert("Hata", err?.message || "Plan oluşturulamadı.");
@@ -310,7 +311,7 @@ export default function TripDetailScreen() {
   const fetchTripDetails = useCallback(async () => {
     try {
       setLoading(true);
-      const tripRef = doc(db, "trips", id);
+      const tripRef = doc(db!, "trips", id as string);
       const tripSnap = await getDoc(tripRef);
 
       if (!tripSnap.exists()) {
@@ -366,13 +367,13 @@ export default function TripDetailScreen() {
         }
       }
 
-      const tripData = {
+      const tripData: SavedTrip = {
         id: tripSnap.id,
         ...data,
         startDate,
         endDate,
         createdAt,
-      };
+      } as SavedTrip;
 
       setTrip(tripData);
       setIsReadOnly(readOnly);
@@ -411,7 +412,7 @@ export default function TripDetailScreen() {
     fetchTripDetails();
   }, [fetchTripDetails, id]);
 
-  const formatDate = (date) => {
+  const formatDate = (date: Date | string | null | undefined) => {
     if (!date) return "Belirtilmemiş";
     const dateObj = date instanceof Date ? date : new Date(date);
     return dateObj.toLocaleDateString("tr-TR", {
@@ -835,7 +836,7 @@ export default function TripDetailScreen() {
                               trip.selectedPlace?.coordinates || {},
                             ),
                             recommendations: JSON.stringify(
-                              trip.aiPlan.recommendations || {},
+                              trip.aiPlan?.recommendations || {},
                             ),
                           },
                         });
@@ -953,7 +954,7 @@ export default function TripDetailScreen() {
                 initialRating={trip.rating ?? null}
                 initialReview={trip.review ?? null}
                 onSaved={(r, rev) =>
-                  setTrip((prev) => ({ ...prev, rating: r, review: rev }))
+                  setTrip((prev) => prev ? ({ ...prev, rating: r, review: rev }) : null)
                 }
               />
             </InfoCard>

@@ -42,7 +42,7 @@ export default function GenerateAITrip() {
 
   const [generating, setGenerating] = useState(false);
   const [aiPlan, setAiPlan] = useState(tripData?.aiPlan || null);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
   const [apiKeyAvailable, setApiKeyAvailable] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
 
@@ -125,7 +125,7 @@ export default function GenerateAITrip() {
       setAiPlan(plan);
       setTripData({ ...tripData, aiPlan: plan });
     } catch (err) {
-      const rawMessage = err?.message || "";
+      const rawMessage = (err as Error)?.message || "";
       const alertMessage = isQuotaOrRateLimitError(rawMessage)
         ? "OpenAI kota limiti doldu. Biraz bekleyip tekrar deneyin."
         : rawMessage || "Plan oluşturulurken bir hata oluştu.";

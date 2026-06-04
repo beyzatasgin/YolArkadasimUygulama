@@ -186,7 +186,7 @@ export default function Mytrip() {
           const trips: TripListItem[] = [];
           snapshot.forEach((doc) => {
             if (!doc.exists()) {
-              console.warn("⚠️ Document does not exist:", doc.id);
+              console.warn("⚠️ Document does not exist:", (doc as any).id);
               return;
             }
 
@@ -313,8 +313,8 @@ export default function Mytrip() {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
 
-                  const upcoming = [];
-                  const past = [];
+                  const upcoming: TripListItem[] = [];
+                  const past: TripListItem[] = [];
 
                   trips.forEach((trip) => {
                     if (trip.startDate) {
@@ -385,7 +385,7 @@ export default function Mytrip() {
     return () => unsub();
   }, []);
 
-  const formatDate = (date) => {
+  const formatDate = (date: Date | string | null | undefined) => {
     if (!date) return "";
     const dateObj = date instanceof Date ? date : new Date(date);
     return dateObj.toLocaleDateString("tr-TR", {
@@ -395,7 +395,7 @@ export default function Mytrip() {
     });
   };
 
-  const handleDeleteTrip = async (tripId, tripName) => {
+  const handleDeleteTrip = async (tripId: string, tripName: string) => {
     Alert.alert(
       "Seyahati Sil",
       `"${tripName}" seyahatini silmek istediğinizden emin misiniz?`,
@@ -419,7 +419,7 @@ export default function Mytrip() {
     );
   };
 
-  const renderTripCard = ({ item }) => {
+  const renderTripCard = ({ item }: { item: TripListItem }) => {
     const placeImageUrl =
       item.selectedPlace?.photoUrl ||
       getPlaceImageUrl(item.selectedPlace?.name);

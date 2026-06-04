@@ -35,6 +35,13 @@ export type SavedTrip = TripData & {
   tripName: string;
   createdAt?: Date;
   updatedAt?: Date;
+  rating?: number | null;
+  review?: string | null;
+  notes?: string;
+  packingChecked?: Record<string, boolean>;
+  isPublic?: boolean;
+  sharedWith?: string[];
+  [key: string]: unknown;
 };
 
 /** Firestore'dan gelen seyahat listesi öğesi (kısmi alanlar olabilir) */
@@ -51,6 +58,11 @@ export type TripListItem = {
   notes?: string;
   aiPlan?: AIPlan | null;
   createdAt?: Date;
+  rating?: number | null;
+  review?: string | null;
+  packingChecked?: Record<string, boolean>;
+  isPublic?: boolean;
+  sharedWith?: string[];
 };
 
 export type CreateTripContextValue = {

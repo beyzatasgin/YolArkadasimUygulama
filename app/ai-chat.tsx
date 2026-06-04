@@ -85,6 +85,7 @@ export default function AiChat() {
     }
     const loadHistory = async () => {
       try {
+        if (!db) return;
         const snap = await getDoc(doc(db, "trips", tripId));
         if (snap.exists()) {
           const saved = snap.data()?.chatHistory;
@@ -115,7 +116,7 @@ export default function AiChat() {
       ...m,
       timestamp: m.timestamp instanceof Date ? m.timestamp.toISOString() : m.timestamp,
     }));
-    updateDoc(doc(db, "trips", tripId), { chatHistory: serialized }).catch(() => {});
+    if (db) updateDoc(doc(db, "trips", tripId), { chatHistory: serialized }).catch(() => {});
   }, [messages, tripId, historyLoaded]);
 
   useEffect(() => {

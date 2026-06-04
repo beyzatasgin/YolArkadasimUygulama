@@ -38,7 +38,7 @@ export default function ReviewTrip() {
     });
   }, [navigation]);
 
-  const formatDate = (date) => {
+  const formatDate = (date: Date | string | null | undefined) => {
     if (!date) return "Seçilmedi";
     const dateObj = date instanceof Date ? date : new Date(date);
     return dateObj.toLocaleDateString("tr-TR", {
@@ -126,7 +126,7 @@ export default function ReviewTrip() {
               <Text style={styles.placeAddress}>{tripData.selectedPlace.address}</Text>
               {tripData.selectedPlace.url && (
                 <TouchableOpacity
-                  onPress={() => Linking.openURL(tripData.selectedPlace.url)}
+                  onPress={() => Linking.openURL(tripData.selectedPlace?.url ?? "")}
                   style={styles.linkRow}
                 >
                   <Ionicons name="open-outline" size={14} color={ACCENT} />
@@ -303,7 +303,6 @@ const styles = StyleSheet.create({
   },
   progressBarTrack: {
     height: 4,
-    backgroundColor: "rgba(99,102,241,0.2)",
     backgroundColor: "#D1D5DB",
   },
   progressBarFill: {

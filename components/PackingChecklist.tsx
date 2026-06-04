@@ -85,6 +85,7 @@ export default function PackingChecklist({
       if (saveTimeout.current) clearTimeout(saveTimeout.current);
       saveTimeout.current = setTimeout(async () => {
         try {
+          if (!db) return;
           await updateDoc(doc(db, "trips", tripId), {
             packingChecked: next,
           });

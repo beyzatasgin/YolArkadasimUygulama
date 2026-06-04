@@ -62,10 +62,10 @@ export default function SearchPlace() {
   const navigation = useNavigation();
   const { tripData, setTripData } = useCreateTrip();
   const [searchText, setSearchText] = useState("");
-  const [predictions, setPredictions] = useState([]);
+  const [predictions, setPredictions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedPlace, setSelectedPlace] = useState(null);
-  const [searchTimeout, setSearchTimeout] = useState(null);
+  const [selectedPlace, setSelectedPlace] = useState<Record<string, any> | null>(null);
+  const [searchTimeout, setSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [lastSearchTime, setLastSearchTime] = useState(0);
   const [placesConfigAlertShown, setPlacesConfigAlertShown] = useState(false);
   const [inputFocused, setInputFocused] = useState(false);
@@ -90,7 +90,7 @@ export default function SearchPlace() {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
-  const searchPlaces = async (text, retryCount = 0) => {
+  const searchPlaces = async (text: string, retryCount = 0) => {
     if (text.length < 2) {
       setPredictions([]);
       return;
@@ -132,8 +132,9 @@ export default function SearchPlace() {
       }
     } catch (error) {
       clearTimeout(timeoutId);
+      const err = error as Error;
 
-      if (error.name === "AbortError") {
+      if (err.name === "AbortError") {
         console.warn("⚠️ Google Places API timeout - istek zamanında tamamlanamadı");
         if (retryCount < 1) {
           setTimeout(() => searchPlaces(text, retryCount + 1), 3000);
@@ -144,8 +145,8 @@ export default function SearchPlace() {
       }
 
       if (
-        error.message?.includes("Network request failed") ||
-        error.message?.includes("Failed to fetch")
+        err.message?.includes("Network request failed") ||
+        err.message?.includes("Failed to fetch")
       ) {
         console.warn("⚠️ Google Places API network hatası");
         if (retryCount < 1) {
@@ -155,7 +156,7 @@ export default function SearchPlace() {
         setPredictions([]);
         return;
       } else {
-        const message = error?.message || String(error);
+        const message = err?.message || String(error);
         console.error("❌ Google Places API hatası:", message);
 
         const isPermissionIssue =
@@ -180,7 +181,7 @@ export default function SearchPlace() {
     }
   };
 
-  const handleSearchChange = (text) => {
+  const handleSearchChange = (text: string) => {
     setSearchText(text);
 
     if (searchTimeout) clearTimeout(searchTimeout);
@@ -217,9 +218,9 @@ export default function SearchPlace() {
     };
   }, [searchTimeout]);
 
-  const getPlaceImageUrl = (placeName) => getFallbackImageUrl(placeName);
+  const getPlaceImageUrl = (placeName: string) => getFallbackImageUrl(placeName);
 
-  const getFallbackImageUrl = (placeName) => {
+  const getFallbackImageUrl = (placeName: string) => {
     try {
       const cleanName = placeName?.split(",")[0].trim().toLowerCase() || "travel";
       const placeImageMap = {
@@ -235,7 +236,7 @@ export default function SearchPlace() {
         rome: "https://images.unsplash.com/photo-1515542622106-78bda8ba0e5b?auto=format&fit=crop&w=900&q=80",
       };
 
-      if (placeImageMap[cleanName]) return placeImageMap[cleanName];
+      if (placeImageMap[cleanName as keyof typeof placeImageMap]) return placeImageMap[cleanName as keyof typeof placeImageMap];
 
       const travelImages = [
         "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=900&q=80",
@@ -255,7 +256,7 @@ export default function SearchPlace() {
     }
   };
 
-  const fetchPlaceDetails = async (placeId, lat, lon, retryCount = 0) => {
+  const fetchPlaceDetails = async (placeId: string, lat: string | null, lon: string | null, retryCount = 0) => {
     const apiKey = getGooglePlacesApiKey();
     if (!apiKey || apiKey.includes("YOUR_")) {
       console.warn("⚠️ Google Places API key bulunamadı.");
@@ -288,8 +289,8 @@ export default function SearchPlace() {
       const place = await response.json();
 
       if (place && !place.error) {
-        const latitude = place.location?.latitude ?? parseFloat(lat || 0);
-        const longitude = place.location?.longitude ?? parseFloat(lon || 0);
+        const latitude = place.location?.latitude ?? parseFloat(lat ?? "0");
+        const longitude = place.location?.longitude ?? parseFloat(lon ?? "0");
         const googleMapsUrl =
           place.googleMapsUri ||
           `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
@@ -317,8 +318,9 @@ export default function SearchPlace() {
       }
     } catch (error) {
       clearTimeout(timeoutId);
+      const err = error as Error;
 
-      if (error.name === "AbortError") {
+      if (err.name === "AbortError") {
         if (retryCount < 2) {
           setTimeout(() => fetchPlaceDetails(placeId, lat, lon, retryCount + 1), 1000);
           return;
@@ -326,8 +328,8 @@ export default function SearchPlace() {
       }
 
       if (
-        error.message?.includes("Network request failed") ||
-        error.message?.includes("Failed to fetch")
+        err.message?.includes("Network request failed") ||
+        err.message?.includes("Failed to fetch")
       ) {
         if (retryCount < 2) {
           setTimeout(() => fetchPlaceDetails(placeId, lat, lon, retryCount + 1), 2000);
@@ -337,7 +339,7 @@ export default function SearchPlace() {
         const fallbackDetails = {
           name: "Seçilen Konum",
           address: `${lat}, ${lon}`,
-          coordinates: { lat: parseFloat(lat), lon: parseFloat(lon) },
+          coordinates: { lat: parseFloat(lat ?? "0"), lon: parseFloat(lon ?? "0") },
           url: `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`,
           photoUrl: getPlaceImageUrl("travel"),
           rating: null,
@@ -346,12 +348,12 @@ export default function SearchPlace() {
         };
         setSelectedPlace(fallbackDetails);
       } else {
-        console.error("❌ Google Places API hatası:", error.message || error);
+        console.error("❌ Google Places API hatası:", err.message || error);
       }
     }
   };
 
-  const selectPlace = (prediction) => {
+  const selectPlace = (prediction: Record<string, any>) => {
     setSearchText(prediction.description);
     setPredictions([]);
     fetchPlaceDetails(prediction.place_id, null, null);
@@ -363,7 +365,7 @@ export default function SearchPlace() {
       return;
     }
 
-    const updatedTripData = { ...tripData, selectedPlace };
+    const updatedTripData = { ...tripData, selectedPlace: selectedPlace as any };
     setTripData(updatedTripData);
     router.push("/create-trip/select-date");
   };

@@ -37,17 +37,17 @@ const BODY_BG = "#F5F7FB";
 const TEXT_PRIMARY = "#111827";
 const TEXT_MUTED = "#9CA3AF";
 
-const isPlainObject = (value) =>
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   Object.prototype.toString.call(value) === "[object Object]";
 
-const removeUndefinedFields = (value) => {
+const removeUndefinedFields = (value: unknown): any => {
   if (Array.isArray(value)) {
     return value
       .map((item) => removeUndefinedFields(item))
       .filter((item) => item !== undefined);
   }
   if (!isPlainObject(value)) return value;
-  const cleaned = {};
+  const cleaned: Record<string, unknown> = {};
   Object.entries(value).forEach(([key, fieldValue]) => {
     const normalizedValue = removeUndefinedFields(fieldValue);
     if (normalizedValue !== undefined) {
@@ -124,7 +124,7 @@ export default function TripDetails() {
     }
   }, [saved, router]);
 
-  const formatDate = (date) => {
+  const formatDate = (date: Date | string | null | undefined) => {
     if (!date) return "Seçilmedi";
     const dateObj = date instanceof Date ? date : new Date(date);
     return dateObj.toLocaleDateString("tr-TR", {
@@ -195,7 +195,7 @@ export default function TripDetails() {
       });
 
       console.log("💾 Saving trip to Firestore...", tripToSave);
-      const tripsRef = collection(db, "trips");
+      const tripsRef = collection(db!, "trips");
       const docRef = await addDoc(tripsRef, tripToSave);
       console.log("✅ Trip saved successfully to Firestore with ID:", docRef.id);
 
@@ -221,11 +221,12 @@ export default function TripDetails() {
     } catch (error) {
       console.error("❌ Trip save error:", error);
       setSaved(false);
-      let errorMessage = error.message || "Bilinmeyen bir hata oluştu";
-      if (error?.code === "permission-denied") {
+      const err = error as any;
+      let errorMessage = err.message || "Bilinmeyen bir hata oluştu";
+      if (err?.code === "permission-denied") {
         errorMessage =
           "Yazma izni reddedildi. Firestore güvenlik kurallarını kontrol edin.";
-      } else if (error?.code === "unavailable") {
+      } else if (err?.code === "unavailable") {
         errorMessage =
           "Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin.";
       }
@@ -352,7 +353,7 @@ export default function TripDetails() {
                 ))}
                 {(tripData?.aiPlan?.itinerary?.length || 0) > 2 && (
                   <Text style={styles.moreDaysText}>
-                    +{(tripData.aiPlan.itinerary.length - 2)} gün daha...
+                    +{((tripData?.aiPlan?.itinerary?.length ?? 0) - 2)} gün daha...
                   </Text>
                 )}
               </View>

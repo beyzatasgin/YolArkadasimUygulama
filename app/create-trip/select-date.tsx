@@ -84,7 +84,7 @@ export default function SelectDate() {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
-  const formatDate = (date) => {
+  const formatDate = (date: Date | null) => {
     if (!date) return null;
     return date.toLocaleDateString("tr-TR", {
       day: "numeric",
@@ -93,7 +93,7 @@ export default function SelectDate() {
     });
   };
 
-  const formatShortDate = (date) => {
+  const formatShortDate = (date: Date | null) => {
     if (!date) return null;
     return date.toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
   };
@@ -104,7 +104,7 @@ export default function SelectDate() {
     return today;
   };
 
-  const handleStartDateSelect = (date) => {
+  const handleStartDateSelect = (date: Date) => {
     setSelectedStartDate(date);
     if (selectedDuration) {
       const endDate = new Date(date);
@@ -113,16 +113,16 @@ export default function SelectDate() {
     }
   };
 
-  const handleEndDateSelect = (date) => {
+  const handleEndDateSelect = (date: Date) => {
     setSelectedEndDate(date);
     if (selectedStartDate) {
-      const diffTime = Math.abs(date - selectedStartDate);
+      const diffTime = Math.abs(date.getTime() - selectedStartDate.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
       setSelectedDuration(diffDays);
     }
   };
 
-  const handleDurationSelect = (duration) => {
+  const handleDurationSelect = (duration: number) => {
     setSelectedDuration(duration);
     if (selectedStartDate) {
       const endDate = new Date(selectedStartDate);

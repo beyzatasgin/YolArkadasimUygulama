@@ -13,7 +13,9 @@
     "typecheck:app": "tsc --noEmit",
     "functions:build": "npm --prefix functions run build",
     "functions:serve": "npm --prefix functions run serve",
-    "functions:deploy": "npm --prefix functions run deploy"
+    "functions:deploy": "npm --prefix functions run deploy",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -56,10 +58,23 @@
     "xdate": "^0.8.3"
   },
   "devDependencies": {
+    "@testing-library/react-native": "^13.3.3",
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.1.10",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
+    "jest": "^29.7.0",
+    "jest-expo": "^56.0.4",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "jest": {
+    "preset": "jest-expo",
+    "transformIgnorePatterns": [
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg|firebase|@firebase|@google/generative-ai)"
+    ],
+    "moduleNameMapper": {
+      "^@/(.*)$": "<rootDir>/$1"
+    }
+  }
 }

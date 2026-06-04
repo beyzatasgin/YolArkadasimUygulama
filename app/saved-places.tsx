@@ -38,7 +38,7 @@ const DANGER = "#EF4444";
 export default function SavedPlaces() {
   const navigation = useNavigation();
   const router = useRouter();
-  const [savedPlaces, setSavedPlaces] = useState([]);
+  const [savedPlaces, setSavedPlaces] = useState<Record<string, any>[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
 
@@ -85,7 +85,7 @@ export default function SavedPlaces() {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const places = [];
+        const places: Record<string, any>[] = [];
         snapshot.forEach((docSnap) => {
           const data = docSnap.data();
           places.push({
@@ -116,7 +116,7 @@ export default function SavedPlaces() {
     return () => unsubscribe();
   }, []);
 
-  const handleDeletePlace = async (placeId) => {
+  const handleDeletePlace = async (placeId: string) => {
     Alert.alert(
       "Yeri Kaldır",
       "Bu yeri kaydedilenlerden kaldırmak istediğinizden emin misiniz?",
@@ -127,7 +127,7 @@ export default function SavedPlaces() {
           style: "destructive",
           onPress: async () => {
             try {
-              await deleteDoc(doc(db, "savedPlaces", placeId));
+              await deleteDoc(doc(db!, "savedPlaces", placeId));
             } catch (error) {
               console.error("Error deleting place:", error);
               Alert.alert("Hata", "Yer kaldırılırken bir hata oluştu.");
@@ -138,7 +138,7 @@ export default function SavedPlaces() {
     );
   };
 
-  const openInMaps = (place) => {
+  const openInMaps = (place: Record<string, any>) => {
     if (place.coordinates) {
       const { lat, lon } = place.coordinates;
       const url =
@@ -151,7 +151,7 @@ export default function SavedPlaces() {
     }
   };
 
-  const formatDate = (date) => {
+  const formatDate = (date: Date | string | null | undefined) => {
     if (!date) return "";
     const dateObj = date instanceof Date ? date : new Date(date);
     return dateObj.toLocaleDateString("tr-TR", {

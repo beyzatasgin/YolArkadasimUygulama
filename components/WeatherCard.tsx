@@ -14,6 +14,11 @@ type WeatherData = {
     windspeed: number;
     weathercode: number;
   };
+  current_weather: {
+    temperature: number;
+    windspeed: number;
+    weathercode: number;
+  };
   daily: {
     time: string[];
     temperature_2m_max: number[];

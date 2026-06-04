@@ -64,7 +64,7 @@ export default function TripPreferences() {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
-  const toggleInterest = (interestId) => {
+  const toggleInterest = (interestId: string) => {
     setSelectedInterests((prev) =>
       prev.includes(interestId)
         ? prev.filter((id) => id !== interestId)

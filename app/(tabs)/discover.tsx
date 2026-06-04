@@ -84,7 +84,7 @@ const CATEGORY_CHIPS = [
   { label: "Dubai", icon: "🌆" },
 ];
 
-const buildMapsUrl = (place) => {
+const buildMapsUrl = (place: Record<string, any>) => {
   if (place.url) {
     return place.url;
   }
@@ -234,7 +234,7 @@ export default function Discover() {
     };
   }, []);
 
-  const getPlaceUniqueId = (place) => {
+  const getPlaceUniqueId = (place: Record<string, any>) => {
     if (place.placeId) {
       return String(place.placeId);
     }
@@ -244,13 +244,13 @@ export default function Discover() {
     return String(place.id || place.title || "unknown");
   };
 
-  const isPlaceSaved = (place) => {
+  const isPlaceSaved = (place: Record<string, any>) => {
     const uniqueId = getPlaceUniqueId(place);
     return savedPlaceIds.has(uniqueId);
   };
 
-  const handleSavePlace = async (place, e) => {
-    e?.stopPropagation();
+  const handleSavePlace = async (place: Record<string, any>, e?: { stopPropagation?: () => void }) => {
+    if (e?.stopPropagation) e.stopPropagation();
 
     if (!auth) {
       const initMessage = getFirebaseAuthInitErrorMessage(firebaseInitError);
@@ -314,7 +314,7 @@ export default function Discover() {
     }
   };
 
-  const renderTripCard = ({ item }) => {
+  const renderTripCard = ({ item }: { item: Record<string, any> }) => {
     const saved = isPlaceSaved(item);
 
     return (

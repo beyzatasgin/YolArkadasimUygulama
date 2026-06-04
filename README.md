@@ -138,7 +138,8 @@ Yol Arkadaşım, kullanıcıların destinasyon seçerek tarih ve ilgi alanların
 ├── context/                # CreateTripContext
 ├── hooks/                  # useCreateTrip, useNetworkStatus, useAttractionPins
 ├── utils/                  # imageHelper, firestore, router
-└── types/                  # TypeScript tip tanımları
+├── types/                  # TypeScript tip tanımları
+└── __tests__/              # Jest birim testleri
 ```
 
 ---
@@ -256,12 +257,39 @@ Profil → 📊 İstatistikler
 
 ---
 
-## 🧪 Geliştirme Komutları
+## 🧪 Test
+
+Proje Jest + jest-expo ile test edilmiştir.
+
+```bash
+npm test              # Tüm testleri çalıştır
+npm run test:watch    # İzleme modunda çalıştır
+```
+
+### Test Kapsamı
+
+| Dosya | Açıklama | Test Sayısı |
+|-------|----------|-------------|
+| `__tests__/tripPlanService.test.ts` | AI yanıt parse, kota hata tespiti | 6 |
+| `__tests__/chatService.test.ts` | Mesaj tipleri, OpenAI/Gemini format dönüşümleri | 9 |
+| `__tests__/utils.test.ts` | Tarih hesaplama, gezi validasyonu, format | 11 |
+
+---
+
+## 🛡️ Kod Kalitesi
+
+- **TypeScript Strict Mode** aktif — tüm dosyalarda tip güvenliği sağlanmıştır
+- `npm run typecheck` ile sıfır hata doğrulanabilir
+
+---
+
+## ⚙️ Geliştirme Komutları
 
 ```bash
 npm run android           # Android emülatör / cihaz
 npm run ios               # iOS simülatör / cihaz
 npm run web               # Web tarayıcı
+npm test                  # Testleri çalıştır
 npm run lint              # ESLint kontrolü
 npm run typecheck         # TypeScript tip kontrolü
 npm run functions:serve   # Cloud Functions yerel emülatör

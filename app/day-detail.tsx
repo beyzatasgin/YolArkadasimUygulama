@@ -3,6 +3,7 @@ import Constants from "expo-constants";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { DayItinerary, AIRecommendations } from "../types/ai";
 import {
   ActivityIndicator,
   Alert,
@@ -28,11 +29,11 @@ export default function DayDetail() {
   const navigation = useNavigation();
   const router = useRouter();
   const params = useLocalSearchParams();
-  const [day, setDay] = useState(null);
-  const [recommendations, setRecommendations] = useState(null);
+  const [day, setDay] = useState<DayItinerary | null>(null);
+  const [recommendations, setRecommendations] = useState<AIRecommendations | null>(null);
   const [placeName, setPlaceName] = useState("");
-  const [placeCoordinates, setPlaceCoordinates] = useState(null);
-  const [placesInfoMap, setPlacesInfoMap] = useState({});
+  const [placeCoordinates, setPlaceCoordinates] = useState<{lat: number; lon: number} | null>(null);
+  const [placesInfoMap, setPlacesInfoMap] = useState<Record<string, any>>({});
   const [googleDataLoading, setGoogleDataLoading] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -52,11 +53,11 @@ export default function DayDetail() {
 
   useEffect(() => {
     try {
-      if (params.day) setDay(JSON.parse(params.day));
-      if (params.recommendations) setRecommendations(JSON.parse(params.recommendations));
-      if (params.placeName) setPlaceName(params.placeName);
+      if (params.day) setDay(JSON.parse(params.day as string));
+      if (params.recommendations) setRecommendations(JSON.parse(params.recommendations as string));
+      if (params.placeName) setPlaceName(params.placeName as string);
       if (params.placeCoordinates) {
-        const coords = JSON.parse(params.placeCoordinates);
+        const coords = JSON.parse(params.placeCoordinates as string);
         if (coords.lat && coords.lon) setPlaceCoordinates(coords);
       }
       setLoading(false);
@@ -66,7 +67,7 @@ export default function DayDetail() {
     }
   }, [params.day, params.recommendations, params.placeName, params.placeCoordinates]);
 
-  const searchPlaceOnMaps = async (placeName) => {
+  const searchPlaceOnMaps = async (placeName: string) => {
     try {
       const query = encodeURIComponent(`${placeName}, ${params.placeName || ""}`);
       await Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
@@ -76,7 +77,7 @@ export default function DayDetail() {
     }
   };
 
-  const searchRestaurantOnMaps = async (restaurantName) => {
+  const searchRestaurantOnMaps = async (restaurantName: string) => {
     try {
       const query = encodeURIComponent(`${restaurantName}, ${params.placeName || ""}`);
       await Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
@@ -93,7 +94,7 @@ export default function DayDetail() {
     Constants.expoConfig?.extra?.googleMapKey ||
     Constants.manifest?.extra?.googlePlacesApiKey;
 
-  const getFallbackTravelImage = (seed) => {
+  const getFallbackTravelImage = (seed: string) => {
     const images = [
       "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=900&q=80",
       "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=900&q=80",
@@ -108,12 +109,12 @@ export default function DayDetail() {
     return images[Math.abs(hash) % images.length];
   };
 
-  const buildGooglePhotoUrl = (photoName, apiKey) => {
+  const buildGooglePhotoUrl = (photoName: string | null | undefined, apiKey: string | null | undefined) => {
     if (!photoName || !apiKey) return null;
     return `https://places.googleapis.com/v1/${photoName}/media?maxHeightPx=1200&key=${apiKey}`;
   };
 
-  const extractActivityTitle = (activity) => {
+  const extractActivityTitle = (activity: string) => {
     const placeKeywords = activity.match(
       /([A-ZÇĞİÖŞÜ][a-zçğıöşü]+(?:\s+[A-ZÇĞİÖŞÜ][a-zçğıöşü]+)*)/g,
     );
@@ -121,13 +122,13 @@ export default function DayDetail() {
     return hasLocation ? placeKeywords[0] : activity.split(".")[0].trim();
   };
 
-  const normalizeListItem = (item, fallbackName) => {
+  const normalizeListItem = (item: Record<string, any> | string, fallbackName: string) => {
     if (typeof item === "string") return { name: item };
     return item || { name: fallbackName };
   };
 
-  const haversineDistanceKm = (from, to) => {
-    const toRad = (value) => (value * Math.PI) / 180;
+  const haversineDistanceKm = (from: {lat: number; lon: number}, to: {lat: number; lon: number}) => {
+    const toRad = (value: number) => (value * Math.PI) / 180;
     const earthRadiusKm = 6371;
     const dLat = toRad(to.lat - from.lat);
     const dLon = toRad(to.lon - from.lon);
@@ -236,7 +237,7 @@ export default function DayDetail() {
         let nearestIndex = 0;
         let nearestDistance = Infinity;
         remaining.forEach((candidate, index) => {
-          const distance = haversineDistanceKm(cursor, candidate.coordinates);
+          const distance = haversineDistanceKm(cursor, candidate.coordinates!);
           if (distance < nearestDistance) {
             nearestDistance = distance;
             nearestIndex = index;
@@ -244,7 +245,7 @@ export default function DayDetail() {
         });
         const [nearest] = remaining.splice(nearestIndex, 1);
         ordered.push(nearest);
-        cursor = nearest.coordinates;
+        cursor = nearest.coordinates!;
       }
 
       const limitedOrdered = ordered.slice(0, 10);
@@ -257,9 +258,9 @@ export default function DayDetail() {
       }
 
       const originParam = `${start.lat},${start.lon}`;
-      const destinationParam = `${destination.coordinates.lat},${destination.coordinates.lon}`;
+      const destinationParam = `${destination.coordinates!.lat},${destination.coordinates!.lon}`;
       const waypointParam = waypoints
-        .map((item) => `${item.coordinates.lat},${item.coordinates.lon}`)
+        .map((item) => `${item.coordinates!.lat},${item.coordinates!.lon}`)
         .join("|");
 
       const routeUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(originParam)}&destination=${encodeURIComponent(destinationParam)}&travelmode=driving${waypointParam ? `&waypoints=${encodeURIComponent(waypointParam)}` : ""}`;
@@ -350,11 +351,11 @@ export default function DayDetail() {
             ];
           }),
         );
-        const infoMap = {};
-        results.forEach(([name, info]) => { if (info) infoMap[name] = info; });
+        const infoMap: Record<string, any> = {};
+        results.forEach(([name, info]) => { if (info) infoMap[name as string] = info; });
         setPlacesInfoMap(infoMap);
       } catch (error) {
-        console.warn("Google detayları alınamadı:", error?.message || error);
+        console.warn("Google detayları alınamadı:", (error as any)?.message || error);
       } finally {
         setGoogleDataLoading(false);
       }
@@ -633,7 +634,7 @@ export default function DayDetail() {
                     <Text style={styles.mealValue}>{day.meals.breakfast}</Text>
                   </View>
                   <TouchableOpacity
-                    onPress={() => searchRestaurantOnMaps(day.meals.breakfast)}
+                    onPress={() => searchRestaurantOnMaps(day.meals?.breakfast ?? "")}
                     style={styles.mealMapBtn}
                   >
                     <Ionicons name="map-outline" size={16} color={ACCENT} />
@@ -650,7 +651,7 @@ export default function DayDetail() {
                     <Text style={styles.mealValue}>{day.meals.lunch}</Text>
                   </View>
                   <TouchableOpacity
-                    onPress={() => searchRestaurantOnMaps(day.meals.lunch)}
+                    onPress={() => searchRestaurantOnMaps(day.meals?.lunch ?? "")}
                     style={styles.mealMapBtn}
                   >
                     <Ionicons name="map-outline" size={16} color={ACCENT} />
@@ -667,7 +668,7 @@ export default function DayDetail() {
                     <Text style={styles.mealValue}>{day.meals.dinner}</Text>
                   </View>
                   <TouchableOpacity
-                    onPress={() => searchRestaurantOnMaps(day.meals.dinner)}
+                    onPress={() => searchRestaurantOnMaps(day.meals?.dinner ?? "")}
                     style={styles.mealMapBtn}
                   >
                     <Ionicons name="map-outline" size={16} color={ACCENT} />

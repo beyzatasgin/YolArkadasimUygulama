@@ -2,14 +2,23 @@ import React, { useState } from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../constants/Colors';
 
-const DatePickerModal = ({ 
-  visible, 
-  onClose, 
-  onDateSelect, 
-  selectedDate, 
+interface DatePickerModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onDateSelect: (date: Date) => void;
+  selectedDate: Date | null;
+  minDate?: Date;
+  title?: string;
+}
+
+const DatePickerModal = ({
+  visible,
+  onClose,
+  onDateSelect,
+  selectedDate,
   minDate = new Date(),
   title = "Select Date"
-}) => {
+}: DatePickerModalProps) => {
   const [currentMonth, setCurrentMonth] = useState(
     selectedDate ? selectedDate.getMonth() : new Date().getMonth()
   );
@@ -27,12 +36,12 @@ const DatePickerModal = ({
   const dayNames = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 
   // Ayın günlerini hesapla
-  const getDaysInMonth = (month, year) => {
+  const getDaysInMonth = (month: number, year: number) => {
     return new Date(year, month + 1, 0).getDate();
   };
 
   // Ayın ilk gününün haftanın hangi günü olduğunu hesapla
-  const getFirstDayOfMonth = (month, year) => {
+  const getFirstDayOfMonth = (month: number, year: number) => {
     return new Date(year, month, 1).getDay();
   };
 
@@ -57,14 +66,14 @@ const DatePickerModal = ({
   };
 
   // Tarih seçimi
-  const handleDateSelect = (day) => {
-    const selectedDate = new Date(currentYear, currentMonth, day);
+  const handleDateSelect = (day: number | Date) => {
+    const selectedDate = day instanceof Date ? day : new Date(currentYear, currentMonth, day);
     onDateSelect(selectedDate);
     onClose();
   };
 
   // Tarih geçmişte mi kontrol et
-  const isDateDisabled = (day) => {
+  const isDateDisabled = (day: number) => {
     const date = new Date(currentYear, currentMonth, day);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -72,7 +81,7 @@ const DatePickerModal = ({
   };
 
   // Seçilen tarih mi kontrol et
-  const isSelectedDate = (day) => {
+  const isSelectedDate = (day: number) => {
     if (!selectedDate) return false;
     return (
       selectedDate.getDate() === day &&
@@ -82,7 +91,7 @@ const DatePickerModal = ({
   };
 
   // Bugün mü kontrol et
-  const isToday = (day) => {
+  const isToday = (day: number) => {
     const today = new Date();
     return (
       today.getDate() === day &&

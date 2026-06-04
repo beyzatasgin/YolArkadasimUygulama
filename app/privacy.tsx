@@ -63,17 +63,17 @@ export default function Privacy() {
     return () => { mounted = false; };
   }, []);
 
-  const updateDataSharing = useCallback(async (value) => {
+  const updateDataSharing = useCallback(async (value: boolean) => {
     setDataSharing(value);
     if (settingsLoaded) await savePrivacySettings({ dataSharing: value, analytics, locationTracking });
   }, [analytics, locationTracking, settingsLoaded]);
 
-  const updateAnalytics = useCallback(async (value) => {
+  const updateAnalytics = useCallback(async (value: boolean) => {
     setAnalytics(value);
     if (settingsLoaded) await savePrivacySettings({ dataSharing, analytics: value, locationTracking });
   }, [dataSharing, locationTracking, settingsLoaded]);
 
-  const updateLocationTracking = useCallback(async (value) => {
+  const updateLocationTracking = useCallback(async (value: boolean) => {
     setLocationTracking(value);
     if (settingsLoaded) await savePrivacySettings({ dataSharing, analytics, locationTracking: value });
   }, [analytics, dataSharing, settingsLoaded]);
@@ -96,9 +96,9 @@ export default function Privacy() {
       const credential = EmailAuthProvider.credential(auth.currentUser.email, deleteAccountPassword);
       await reauthenticateWithCredential(auth.currentUser, credential);
 
-      const q = query(collection(db, "trips"), where("userId", "==", auth.currentUser.uid));
+      const q = query(collection(db!, "trips"), where("userId", "==", auth.currentUser.uid));
       const snap = await getDocs(q);
-      await Promise.all(snap.docs.map((d) => deleteDoc(doc(db, "trips", d.id))));
+      await Promise.all(snap.docs.map((d) => deleteDoc(doc(db!, "trips", d.id))));
 
       await deleteUser(auth.currentUser);
       Alert.alert("Hesap Silindi", "Hesabınız ve tüm verileriniz başarıyla silindi.", [
