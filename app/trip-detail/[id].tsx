@@ -62,6 +62,7 @@ export default function TripDetailScreen() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [activeModifier, setActiveModifier] = useState<AlternativePlanModifier | null>(null);
+  const [isReadOnly, setIsReadOnly] = useState(false);
 
   const centerLat = trip?.selectedPlace?.coordinates?.lat
     ? Number(trip.selectedPlace.coordinates.lat)
@@ -320,11 +321,22 @@ export default function TripDetailScreen() {
 
       const data = tripSnap.data();
 
-      if (data.userId !== auth?.currentUser?.uid) {
+      const currentUserUid = auth?.currentUser?.uid;
+      const currentUserEmail = auth?.currentUser?.email?.toLowerCase();
+      const isOwner = data.userId === currentUserUid;
+      const isSharedWith = Array.isArray(data.sharedWith) &&
+        currentUserEmail &&
+        data.sharedWith.map((e: string) => e.toLowerCase()).includes(currentUserEmail);
+      const isPublic = !!data.isPublic;
+
+      if (!isOwner && !isSharedWith && !isPublic) {
         setError("Bu seyahate erişim yetkiniz yok");
         setLoading(false);
         return;
       }
+
+      // Paylaşılan kullanıcı için sadece görüntüleme modu
+      const readOnly = !isOwner;
 
       let startDate = null;
       let endDate = null;
@@ -363,6 +375,7 @@ export default function TripDetailScreen() {
       };
 
       setTrip(tripData);
+      setIsReadOnly(readOnly);
       setIsPublic(!!data.isPublic);
       setSharedWith(Array.isArray(data.sharedWith) ? data.sharedWith : []);
 
@@ -604,22 +617,29 @@ export default function TripDetailScreen() {
             <Ionicons name="arrow-back" size={20} color="#fff" />
           </TouchableOpacity>
 
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <TouchableOpacity
-              onPress={handleEditTrip}
-              style={styles.headerIconBtn}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="create-outline" size={20} color="#fff" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleDeleteTrip}
-              style={[styles.headerIconBtn, { backgroundColor: "rgba(239,68,68,0.75)" }]}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="trash-outline" size={20} color="#fff" />
-            </TouchableOpacity>
-          </View>
+          {!isReadOnly && (
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TouchableOpacity
+                onPress={handleEditTrip}
+                style={styles.headerIconBtn}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="create-outline" size={20} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleDeleteTrip}
+                style={[styles.headerIconBtn, { backgroundColor: "rgba(239,68,68,0.75)" }]}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="trash-outline" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          )}
+          {isReadOnly && (
+            <View style={[styles.headerIconBtn, { backgroundColor: "rgba(255,255,255,0.15)" }]}>
+              <Ionicons name="eye-outline" size={20} color="#fff" />
+            </View>
+          )}
         </View>
 
         <View style={styles.bodyWrapper}>
@@ -940,7 +960,7 @@ export default function TripDetailScreen() {
           )}
 
           {/* ── Paylaş & Arkadaşlar ────────────────────────── */}
-          <InfoCard
+          {!isReadOnly && <InfoCard
             iconName="share-social"
             iconColor="#6366F1"
             iconBg="#EEF2FF"
@@ -1019,7 +1039,7 @@ export default function TripDetailScreen() {
                 </View>
               ))}
             </View>
-          </InfoCard>
+          </InfoCard>}
 
           {/* ── Eşya Listesi ──────────────────────────────── */}
           {trip.aiPlan?.packingList && trip.aiPlan.packingList.length > 0 && (
@@ -1040,7 +1060,7 @@ export default function TripDetailScreen() {
           )}
 
           {/* ── Alternatif Plan ──────────────────────────── */}
-          {trip.aiPlan && (
+          {trip.aiPlan && !isReadOnly && (
             <InfoCard
               iconName="refresh-circle"
               iconColor="#F59E0B"
