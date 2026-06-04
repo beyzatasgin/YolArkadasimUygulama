@@ -13,7 +13,11 @@ service cloud.firestore {
     function canReadTrip(data) {
       return isOwner(data.userId)
           || data.isPublic == true
-          || (request.auth != null && request.auth.token.email in data.sharedWith);
+          || (request.auth != null
+              && request.auth.token.email != null
+              && data.sharedWith != null
+              && data.sharedWith is list
+              && request.auth.token.email in data.sharedWith);
     }
 
     match /trips/{tripId} {
