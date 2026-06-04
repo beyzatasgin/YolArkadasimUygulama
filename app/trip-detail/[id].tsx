@@ -1,10 +1,11 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useLocalSearchParams, useNavigation, useRouter } from "expo-router";
 import { deleteDoc, doc, getDoc, updateDoc } from "firebase/firestore";
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Clipboard,
   Image,
   Linking,
@@ -749,6 +750,8 @@ export default function TripDetailScreen() {
               iconColor={ACCENT}
               iconBg="#EEF2FF"
               title="AI Seyahat Planı"
+              collapsible
+              defaultCollapsed={false}
             >
 
               {/* Günlük Plan */}
@@ -982,6 +985,8 @@ export default function TripDetailScreen() {
               iconColor="#8B5CF6"
               iconBg="#F5F3FF"
               title="Eşya Listesi"
+              collapsible
+              defaultCollapsed={true}
             >
               <PackingChecklist
                 tripId={trip.id}
@@ -1050,24 +1055,53 @@ function InfoCard({
   iconBg,
   title,
   children,
+  collapsible = false,
+  defaultCollapsed = false,
 }: {
   iconName: string;
   iconColor: string;
   iconBg: string;
   title: string;
   children: React.ReactNode;
+  collapsible?: boolean;
+  defaultCollapsed?: boolean;
 }) {
+  const [collapsed, setCollapsed] = React.useState(defaultCollapsed);
+  const rotateAnim = React.useRef(new Animated.Value(defaultCollapsed ? 0 : 1)).current;
+
+  const toggle = () => {
+    const toValue = collapsed ? 1 : 0;
+    Animated.timing(rotateAnim, {
+      toValue,
+      duration: 220,
+      useNativeDriver: true,
+    }).start();
+    setCollapsed(!collapsed);
+  };
+
+  const rotate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "180deg"],
+  });
+
   return (
     <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View
-          style={[styles.cardIconCircle, { backgroundColor: iconBg }]}
-        >
+      <TouchableOpacity
+        onPress={collapsible ? toggle : undefined}
+        activeOpacity={collapsible ? 0.7 : 1}
+        style={styles.cardHeader}
+      >
+        <View style={[styles.cardIconCircle, { backgroundColor: iconBg }]}>
           <Ionicons name={iconName as any} size={18} color={iconColor} />
         </View>
-        <Text style={styles.cardTitle}>{title}</Text>
-      </View>
-      {children}
+        <Text style={[styles.cardTitle, { flex: 1 }]}>{title}</Text>
+        {collapsible && (
+          <Animated.View style={{ transform: [{ rotate }] }}>
+            <Ionicons name="chevron-down" size={18} color={TEXT_MUTED} />
+          </Animated.View>
+        )}
+      </TouchableOpacity>
+      {(!collapsible || !collapsed) && children}
     </View>
   );
 }
