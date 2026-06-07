@@ -85,16 +85,6 @@ export default function TripDetailScreen() {
     Alert.alert("Kopyalandı!", "Paylaşım linki panoya kopyalandı.");
   }, [shareLink]);
 
-  const handleShareLink = useCallback(async () => {
-    const tripName = trip?.tripName || trip?.selectedPlace?.name || "Seyahat";
-    try {
-      await Share.share({
-        title: `${tripName} Seyahat Planı`,
-        message: `✈️ "${tripName}" seyahat planıma göz at!\n\n👇 Aşağıdaki linke tıkla:\n${shareLink}\n\n📱 Yol Arkadaşım uygulaması gereklidir.`,
-      });
-    } catch {}
-  }, [trip, shareLink]);
-
   const handleTogglePublic = useCallback(async (value: boolean) => {
     setTogglingPublic(true);
     try {
@@ -221,7 +211,7 @@ export default function TripDetailScreen() {
       message += `\n💰 Tahmini Bütçe: ${trip.aiPlan.estimatedCost.toLocaleString("tr-TR")} ₺ (kişi başı)\n`;
     }
 
-    message += `\n🤖 Yol Arkadaşım uygulamasıyla oluşturuldu.`;
+    message += `\n━━━━━━━━━━━━━━━━━━\n📱 Yol Arkadaşım — AI destekli seyahat planlama uygulaması`;
 
     try {
       await Share.share({ message });
@@ -229,6 +219,11 @@ export default function TripDetailScreen() {
       console.error("Paylaşım hatası:", err);
     }
   }, [trip]);
+
+  const handleShareLink = useCallback(async () => {
+    // Link yerine seyahat bilgilerini metin olarak paylaş
+    handleShareTrip();
+  }, [handleShareTrip]);
 
   const handleSaveEdit = useCallback(async () => {
     if (!editTripName.trim()) {
