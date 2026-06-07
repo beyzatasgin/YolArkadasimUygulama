@@ -1,5 +1,4 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation, useRouter } from "expo-router";
 import {
@@ -17,7 +16,7 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import { getDownloadURL, ref, uploadString } from "firebase/storage";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -198,13 +197,17 @@ export default function Profile() {
   const uploadPhoto = async (uri: string): Promise<string> => {
     if (!storage || !auth?.currentUser) throw new Error("Storage yok");
 
-    // expo-file-system ile base64 oku — Expo Go dahil tüm ortamlarda çalışır
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: "base64" as any,
-    });
+    // React Native'de firebase/storage'ın uploadString("base64") yöntemi,
+    // dahili olarak ArrayBuffer'dan Blob oluşturmaya çalışıyor — RN'in Blob
+    // implementasyonu bunu desteklemiyor ve "Creating blobs from 'ArrayBuffer'
+    // and 'ArrayBufferView' are not supported" hatası fırlatıyor.
+    // Çözüm: fetch + blob() ile native (RN BlobManager destekli) bir Blob alıp
+    // uploadBytes ile yüklemek — React Native + Firebase projelerinde standart yöntem.
+    const response = await fetch(uri);
+    const blob = await response.blob();
 
     const photoRef = ref(storage, `profile-photos/${auth.currentUser.uid}/${Date.now()}.jpg`);
-    await uploadString(photoRef, base64, "base64", { contentType: "image/jpeg" });
+    await uploadBytes(photoRef, blob, { contentType: "image/jpeg" });
 
     // getDownloadURL bazen gecikebilir (Storage metadata propagation), 5 kez dene
     for (let attempt = 1; attempt <= 5; attempt++) {
