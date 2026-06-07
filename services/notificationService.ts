@@ -1,45 +1,39 @@
 import Constants from "expo-constants";
-import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
-// Expo Go'da remote push token kaydı SDK 53'ten itibaren desteklenmiyor.
-// Yerel (zamanlanmış) bildirimler her ortamda çalışır.
+// Expo Go'da expo-notifications modülü import edilir edilmez
+// DevicePushTokenAutoRegistration side-effect'i çalışır ve hata verir.
+// Bu yüzden Expo Go'da modülü hiç import etmiyoruz.
 const isExpoGo =
   Constants.executionEnvironment === "storeClient" ||
   (Constants.appOwnership != null && Constants.appOwnership === "expo");
 
-// Bildirim gösterim ayarı — uygulama ön plandayken de banner göster
+// Bildirim handler'ını sadece gerçek build'de kur
 if (!isExpoGo) {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
-  });
-} else {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: false,
-      shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }),
-  });
+  // Dinamik import — Expo Go'da bu satır hiç çalışmaz
+  import("expo-notifications").then((Notifications) => {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  }).catch(() => {});
 }
 
 /** Kullanıcıdan bildirim izni ister. Daha önce verildiyse tekrar sormaz. */
 export async function requestNotificationPermission(): Promise<boolean> {
+  if (isExpoGo) return false;
   try {
+    const Notifications = await import("expo-notifications");
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     if (existingStatus === "granted") return true;
     const { status } = await Notifications.requestPermissionsAsync();
     return status === "granted";
   } catch {
-    // Expo Go'da bazı izin çağrıları hata fırlatabilir, sessizce geç
     return false;
   }
 }
@@ -55,11 +49,12 @@ export async function scheduleTripNotifications(params: {
   placeName: string;
   startDate: Date;
 }): Promise<string[]> {
-  // Expo Go'da yerel bildirim zamanlaması da kısıtlı — sessizce atla
   if (isExpoGo) return [];
 
   const hasPermission = await requestNotificationPermission();
   if (!hasPermission) return [];
+
+  const Notifications = await import("expo-notifications");
 
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("trip-reminders", {
@@ -120,8 +115,12 @@ export async function scheduleTripNotifications(params: {
 
 /** Bir seyahate ait tüm zamanlanmış bildirimleri iptal eder. */
 export async function cancelTripNotifications(tripId: string): Promise<void> {
-  await Promise.all([
-    Notifications.cancelScheduledNotificationAsync(`trip-before-${tripId}`).catch(() => {}),
-    Notifications.cancelScheduledNotificationAsync(`trip-day-${tripId}`).catch(() => {}),
-  ]);
+  if (isExpoGo) return;
+  try {
+    const Notifications = await import("expo-notifications");
+    await Promise.all([
+      Notifications.cancelScheduledNotificationAsync(`trip-before-${tripId}`).catch(() => {}),
+      Notifications.cancelScheduledNotificationAsync(`trip-day-${tripId}`).catch(() => {}),
+    ]);
+  } catch {}
 }
