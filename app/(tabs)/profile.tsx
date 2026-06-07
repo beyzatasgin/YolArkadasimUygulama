@@ -206,13 +206,13 @@ export default function Profile() {
     const photoRef = ref(storage, `profile-photos/${auth.currentUser.uid}/${Date.now()}.jpg`);
     await uploadString(photoRef, base64, "base64", { contentType: "image/jpeg" });
 
-    // getDownloadURL bazen gecikebilir, 3 kez dene
-    for (let attempt = 1; attempt <= 3; attempt++) {
+    // getDownloadURL bazen gecikebilir (Storage metadata propagation), 5 kez dene
+    for (let attempt = 1; attempt <= 5; attempt++) {
       try {
         return await getDownloadURL(photoRef);
       } catch (e) {
-        if (attempt === 3) throw e;
-        await new Promise(r => setTimeout(r, attempt * 800));
+        if (attempt === 5) throw e;
+        await new Promise(r => setTimeout(r, attempt * 700));
       }
     }
     throw new Error("URL alınamadı");
@@ -224,7 +224,13 @@ export default function Profile() {
     if (!auth?.currentUser) return;
     setSaving(true);
     try {
-      let finalPhoto = photoUri;
+      // Orijinal (uzak) fotoğraf URL'i — yükleme başarısız olursa buna geri dönülür.
+      // NOT: photoUri, kullanıcı fotoğraf seçer seçmez yerel dosya URI'sine
+      // güncellendiği için (önizleme amacıyla) burada başlangıç değeri olarak
+      // kullanılamaz; aksi halde yükleme başarısız olduğunda yerel "file://" URI'si
+      // Firebase Auth profiline photoURL olarak kaydedilirdi.
+      const originalRemotePhoto = auth.currentUser.photoURL || null;
+      let finalPhoto = originalRemotePhoto;
       let photoFailed = false;
       const isNew = localPhotoUri &&
         !localPhotoUri.startsWith("http://") &&
@@ -232,7 +238,7 @@ export default function Profile() {
       if (isNew) {
         setUploadingPhoto(true);
         try { finalPhoto = await uploadPhoto(localPhotoUri!); }
-        catch (e: any) { photoFailed = true; }
+        catch (e: any) { photoFailed = true; finalPhoto = originalRemotePhoto; }
         finally { setUploadingPhoto(false); }
       }
       await updateProfile(auth.currentUser, {
@@ -241,11 +247,13 @@ export default function Profile() {
       });
       await reload(auth.currentUser).catch(() => {});
       setFullName(name);
-      if (finalPhoto) setPhotoUri(finalPhoto);
+      // Yükleme başarısız olduysa önizleme amacıyla gösterilen yerel fotoğrafı
+      // geri al — aksi halde kullanıcı "güncellendi" sanır ama aslında kaydedilmemiştir.
+      setPhotoUri(finalPhoto);
       setLocalPhotoUri(null);
       setEditModalVisible(false);
       if (photoFailed) {
-        Alert.alert("Uyarı", "Fotoğraf yüklenemedi ama isim güncellendi.");
+        Alert.alert("Uyarı", "Fotoğraf yüklenemedi, lütfen tekrar deneyin. İsim güncellendi.");
       } else if (isNew) {
         Alert.alert("✅ Kaydedildi", "Profil fotoğrafı başarıyla güncellendi.");
       } else {
