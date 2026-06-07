@@ -78,17 +78,21 @@ export default function TripDetailScreen() {
     centerLon,
   );
 
-  const shareLink = `yolarkadasim://shared/${id}`;
+  const shareLink = `https://yolarkadasim.app/shared/${id}`;
+  const deepLink  = `yolarkadasim://shared/${id}`;
 
   const handleCopyLink = useCallback(() => {
-    Clipboard.setString(shareLink);
+    Clipboard.setString(deepLink);
     Alert.alert("Kopyalandı!", "Paylaşım linki panoya kopyalandı.");
-  }, [shareLink]);
+  }, [deepLink]);
 
   const handleShareLink = useCallback(async () => {
+    const tripName = trip?.tripName || trip?.selectedPlace?.name || "Seyahat";
     try {
       await Share.share({
-        message: `✈️ "${trip?.tripName || trip?.selectedPlace?.name}" seyahat planıma göz at!\n\n${shareLink}`,
+        title: `${tripName} Seyahat Planı`,
+        message: `✈️ "${tripName}" seyahat planıma göz at!\n\n🔗 ${shareLink}\n\nYol Arkadaşım uygulamasıyla oluşturuldu.`,
+        url: shareLink,
       });
     } catch {}
   }, [trip, shareLink]);
