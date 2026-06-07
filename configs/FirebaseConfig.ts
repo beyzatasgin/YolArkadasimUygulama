@@ -16,7 +16,7 @@ const firebaseConfig = {
   apiKey: envConfig.apiKey || "AIzaSyDzN9W2pvnlfGFAxAwClypg8yA2Lpl7hT8",
   authDomain: envConfig.authDomain || "travelapp-8096d.firebaseapp.com",
   projectId: envConfig.projectId || "travelapp-8096d",
-  storageBucket: envConfig.storageBucket || "travelapp-8096d.appspot.com",
+  storageBucket: envConfig.storageBucket || "travelapp-8096d.firebasestorage.app",
   messagingSenderId: envConfig.messagingSenderId || "486556902431",
   appId: envConfig.appId || "1:486556902431:web:279f35d0dde69165ba612a",
 };
