@@ -207,10 +207,6 @@ export default function TripDetailScreen() {
       });
     }
 
-    if (trip.aiPlan?.estimatedCost != null) {
-      message += `\n💰 Tahmini Bütçe: ${trip.aiPlan.estimatedCost.toLocaleString("tr-TR")} ₺ (kişi başı)\n`;
-    }
-
     message += `\n━━━━━━━━━━━━━━━━━━\n📱 Yol Arkadaşım — AI destekli seyahat planlama uygulaması`;
 
     try {
