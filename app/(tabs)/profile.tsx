@@ -235,10 +235,16 @@ export default function Profile() {
       const isNew = localPhotoUri &&
         !localPhotoUri.startsWith("http://") &&
         !localPhotoUri.startsWith("https://");
+      let uploadErrorDetail = "";
       if (isNew) {
         setUploadingPhoto(true);
         try { finalPhoto = await uploadPhoto(localPhotoUri!); }
-        catch (e: any) { photoFailed = true; finalPhoto = originalRemotePhoto; }
+        catch (e: any) {
+          photoFailed = true;
+          finalPhoto = originalRemotePhoto;
+          uploadErrorDetail = e?.code ? `${e.code}` : (e?.message || String(e));
+          console.error("[profile] Fotoğraf yükleme hatası:", e);
+        }
         finally { setUploadingPhoto(false); }
       }
       await updateProfile(auth.currentUser, {
@@ -253,7 +259,10 @@ export default function Profile() {
       setLocalPhotoUri(null);
       setEditModalVisible(false);
       if (photoFailed) {
-        Alert.alert("Uyarı", "Fotoğraf yüklenemedi, lütfen tekrar deneyin. İsim güncellendi.");
+        Alert.alert(
+          "Uyarı",
+          `Fotoğraf yüklenemedi, lütfen tekrar deneyin. İsim güncellendi.${uploadErrorDetail ? `\n\nDetay: ${uploadErrorDetail}` : ""}`
+        );
       } else if (isNew) {
         Alert.alert("✅ Kaydedildi", "Profil fotoğrafı başarıyla güncellendi.");
       } else {
