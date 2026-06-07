@@ -78,21 +78,19 @@ export default function TripDetailScreen() {
     centerLon,
   );
 
-  const shareLink = `https://yolarkadasim.app/shared/${id}`;
-  const deepLink  = `yolarkadasim://shared/${id}`;
+  const shareLink = `yolarkadasim://shared/${id}`;
 
   const handleCopyLink = useCallback(() => {
-    Clipboard.setString(deepLink);
+    Clipboard.setString(shareLink);
     Alert.alert("Kopyalandı!", "Paylaşım linki panoya kopyalandı.");
-  }, [deepLink]);
+  }, [shareLink]);
 
   const handleShareLink = useCallback(async () => {
     const tripName = trip?.tripName || trip?.selectedPlace?.name || "Seyahat";
     try {
       await Share.share({
         title: `${tripName} Seyahat Planı`,
-        message: `✈️ "${tripName}" seyahat planıma göz at!\n\n🔗 ${shareLink}\n\nYol Arkadaşım uygulamasıyla oluşturuldu.`,
-        url: shareLink,
+        message: `✈️ "${tripName}" seyahat planıma göz at!\n\n📱 Yol Arkadaşım uygulamasını aç ve aşağıdaki kodu yapıştır:\n${shareLink}\n\n🌍 Yol Arkadaşım — AI destekli seyahat planlama uygulaması`,
       });
     } catch {}
   }, [trip, shareLink]);
@@ -991,7 +989,7 @@ export default function TripDetailScreen() {
             {/* Link kopyala / paylaş butonları */}
             {isPublic && (
               <View style={styles.linkBox}>
-                <Text style={styles.linkText} numberOfLines={1}>{shareLink}</Text>
+                <Text style={styles.linkText} numberOfLines={1}>🔗 shared/{id}</Text>
                 <View style={styles.linkBtns}>
                   <TouchableOpacity style={styles.linkBtn} onPress={handleCopyLink}>
                     <Ionicons name="copy-outline" size={16} color={ACCENT} />
