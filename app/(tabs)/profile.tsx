@@ -17,6 +17,7 @@ import {
   query,
   where,
 } from "firebase/firestore";
+import { getDownloadURL, ref, uploadString } from "firebase/storage";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -35,6 +36,7 @@ import {
   auth,
   db,
   firebaseInitError,
+  storage,
 } from "../../configs/FirebaseConfig";
 import {
   FIREBASE_AUTH_INIT_ERROR_TITLE,
@@ -194,49 +196,26 @@ export default function Profile() {
   };
 
   const uploadPhoto = async (uri: string): Promise<string> => {
-    if (!auth?.currentUser) throw new Error("Oturum yok");
+    if (!storage || !auth?.currentUser) throw new Error("Storage yok");
 
-    // React Native'de firebase/storage JS SDK'sının yükleme yolları (uploadString
-    // base64 → "ArrayBuffer'dan Blob oluşturulamaz" hatası, fetch().blob() →
-    // "storage/unknown" hatası) güvenilmez şekilde başarısız oluyor; SDK'nın
-    // Blob/XHR katmanı RN ortamıyla tam uyumlu çalışmıyor.
-    // Bu yüzden JS SDK'yı tamamen devre dışı bırakıp dosyayı doğrudan Firebase
-    // Storage REST API'sine, expo-file-system'in NATİF uploadAsync'i ile
-    // yüklüyoruz — bu yöntem JS Blob/ArrayBuffer katmanını hiç kullanmaz ve
-    // Expo + Firebase projelerinde bilinen en sağlam çözümdür.
-    const idToken = await auth.currentUser.getIdToken();
-    const bucket = "travelapp-8096d.firebasestorage.app";
-    const path = `profile-photos/${auth.currentUser.uid}/${Date.now()}.jpg`;
-    const encodedPath = encodeURIComponent(path);
-    const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o?uploadType=media&name=${encodedPath}`;
-
-    const uploadResult = await FileSystem.uploadAsync(uploadUrl, uri, {
-      httpMethod: "POST",
-      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
-      headers: {
-        Authorization: `Firebase ${idToken}`,
-        "Content-Type": "image/jpeg",
-      },
+    // expo-file-system ile base64 oku — Expo Go dahil tüm ortamlarda çalışır
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: "base64" as any,
     });
 
-    if (uploadResult.status < 200 || uploadResult.status >= 300) {
-      console.error("[profile] Storage REST yükleme hatası:", uploadResult.status, uploadResult.body);
-      throw new Error(`Yükleme başarısız (HTTP ${uploadResult.status})`);
-    }
+    const photoRef = ref(storage, `profile-photos/${auth.currentUser.uid}/${Date.now()}.jpg`);
+    await uploadString(photoRef, base64, "base64", { contentType: "image/jpeg" });
 
-    let downloadToken: string | undefined;
-    try {
-      const json = JSON.parse(uploadResult.body);
-      downloadToken = json?.downloadTokens?.split(",")[0];
-    } catch {
-      // JSON parse edilemezse aşağıda token'sız URL ile devam edilir
+    // getDownloadURL bazen gecikebilir, 3 kez dene
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        return await getDownloadURL(photoRef);
+      } catch (e) {
+        if (attempt === 3) throw e;
+        await new Promise(r => setTimeout(r, attempt * 800));
+      }
     }
-
-    if (downloadToken) {
-      return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodedPath}?alt=media&token=${downloadToken}`;
-    }
-    // Token alınamadıysa (kurallar herkese açık okumaya izin veriyorsa çalışır)
-    return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodedPath}?alt=media`;
+    throw new Error("URL alınamadı");
   };
 
   const handleSaveProfile = async () => {
@@ -245,38 +224,15 @@ export default function Profile() {
     if (!auth?.currentUser) return;
     setSaving(true);
     try {
-      // Orijinal (uzak) fotoğraf URL'i — yükleme başarısız olursa buna geri dönülür.
-      // NOT: photoUri, kullanıcı fotoğraf seçer seçmez yerel dosya URI'sine
-      // güncellendiği için (önizleme amacıyla) burada başlangıç değeri olarak
-      // kullanılamaz; aksi halde yükleme başarısız olduğunda yerel "file://" URI'si
-      // Firebase Auth profiline photoURL olarak kaydedilirdi.
-      const originalRemotePhoto = auth.currentUser.photoURL || null;
-      let finalPhoto = originalRemotePhoto;
+      let finalPhoto = photoUri;
       let photoFailed = false;
       const isNew = localPhotoUri &&
         !localPhotoUri.startsWith("http://") &&
         !localPhotoUri.startsWith("https://");
-      let uploadErrorDetail = "";
       if (isNew) {
         setUploadingPhoto(true);
         try { finalPhoto = await uploadPhoto(localPhotoUri!); }
-        catch (e: any) {
-          photoFailed = true;
-          finalPhoto = originalRemotePhoto;
-          uploadErrorDetail = e?.code ? `${e.code}` : (e?.message || String(e));
-          // StorageError genelde ham sunucu yanıtını customData/serverResponse
-          // içinde taşır — gerçek nedeni (404/403/CORS/ağ vb.) anlamak için
-          // bunları da logluyoruz.
-          console.error("[profile] Fotoğraf yükleme hatası:", {
-            code: e?.code,
-            message: e?.message,
-            name: e?.name,
-            customData: e?.customData,
-            serverResponse: e?.customData?.serverResponse ?? e?.serverResponse_,
-            status: e?.status_ ?? e?.status,
-            raw: e,
-          });
-        }
+        catch (e: any) { photoFailed = true; }
         finally { setUploadingPhoto(false); }
       }
       await updateProfile(auth.currentUser, {
@@ -285,16 +241,11 @@ export default function Profile() {
       });
       await reload(auth.currentUser).catch(() => {});
       setFullName(name);
-      // Yükleme başarısız olduysa önizleme amacıyla gösterilen yerel fotoğrafı
-      // geri al — aksi halde kullanıcı "güncellendi" sanır ama aslında kaydedilmemiştir.
-      setPhotoUri(finalPhoto);
+      if (finalPhoto) setPhotoUri(finalPhoto);
       setLocalPhotoUri(null);
       setEditModalVisible(false);
       if (photoFailed) {
-        Alert.alert(
-          "Uyarı",
-          `Fotoğraf yüklenemedi, lütfen tekrar deneyin. İsim güncellendi.${uploadErrorDetail ? `\n\nDetay: ${uploadErrorDetail}` : ""}`
-        );
+        Alert.alert("Uyarı", "Fotoğraf yüklenemedi ama isim güncellendi.");
       } else if (isNew) {
         Alert.alert("✅ Kaydedildi", "Profil fotoğrafı başarıyla güncellendi.");
       } else {
