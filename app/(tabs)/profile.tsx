@@ -1,4 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import * as FileSystem from "expo-file-system/legacy";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation, useRouter } from "expo-router";
 import {
@@ -16,7 +17,6 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -35,7 +35,6 @@ import {
   auth,
   db,
   firebaseInitError,
-  storage,
 } from "../../configs/FirebaseConfig";
 import {
   FIREBASE_AUTH_INIT_ERROR_TITLE,
@@ -195,45 +194,49 @@ export default function Profile() {
   };
 
   const uploadPhoto = async (uri: string): Promise<string> => {
-    if (!storage || !auth?.currentUser) throw new Error("Storage yok");
+    if (!auth?.currentUser) throw new Error("Oturum yok");
 
-    // React Native'de firebase/storage yüklemeleri için iki yaygın tuzak var:
-    // 1) uploadString("base64") → dahilen ArrayBuffer'dan Blob oluşturmaya
-    //    çalışır, RN'in Blob implementasyonu bunu desteklemez ("Creating blobs
-    //    from 'ArrayBuffer' ... are not supported" hatası).
-    // 2) fetch(uri).then(r => r.blob()) → RN'in fetch polyfill'i Blob'u doğru
-    //    boyut/içerikle oluşturmaz, bu da sunucudan "storage/unknown" hatası
-    //    döndürülmesine yol açar.
-    // Firebase'in React Native için resmi olarak önerdiği yöntem: blob'u
-    // XMLHttpRequest ile almak — bu, RN'in BlobManager'ı üzerinden gerçek/uyumlu
-    // bir Blob üretir ve uploadBytes ile sorunsuz çalışır.
-    const blob: Blob = await new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.onload = () => resolve(xhr.response);
-      xhr.onerror = () => reject(new Error("Fotoğraf okunamadı (network)"));
-      xhr.responseType = "blob";
-      xhr.open("GET", uri, true);
-      xhr.send(null);
+    // React Native'de firebase/storage JS SDK'sının yükleme yolları (uploadString
+    // base64 → "ArrayBuffer'dan Blob oluşturulamaz" hatası, fetch().blob() →
+    // "storage/unknown" hatası) güvenilmez şekilde başarısız oluyor; SDK'nın
+    // Blob/XHR katmanı RN ortamıyla tam uyumlu çalışmıyor.
+    // Bu yüzden JS SDK'yı tamamen devre dışı bırakıp dosyayı doğrudan Firebase
+    // Storage REST API'sine, expo-file-system'in NATİF uploadAsync'i ile
+    // yüklüyoruz — bu yöntem JS Blob/ArrayBuffer katmanını hiç kullanmaz ve
+    // Expo + Firebase projelerinde bilinen en sağlam çözümdür.
+    const idToken = await auth.currentUser.getIdToken();
+    const bucket = "travelapp-8096d.firebasestorage.app";
+    const path = `profile-photos/${auth.currentUser.uid}/${Date.now()}.jpg`;
+    const encodedPath = encodeURIComponent(path);
+    const uploadUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o?uploadType=media&name=${encodedPath}`;
+
+    const uploadResult = await FileSystem.uploadAsync(uploadUrl, uri, {
+      httpMethod: "POST",
+      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+      headers: {
+        Authorization: `Firebase ${idToken}`,
+        "Content-Type": "image/jpeg",
+      },
     });
 
-    const photoRef = ref(storage, `profile-photos/${auth.currentUser.uid}/${Date.now()}.jpg`);
-    try {
-      await uploadBytes(photoRef, blob, { contentType: "image/jpeg" });
-    } finally {
-      // @ts-expect-error RN Blob'da close metodu bellek temizliği için kullanılır
-      if (typeof blob.close === "function") blob.close();
+    if (uploadResult.status < 200 || uploadResult.status >= 300) {
+      console.error("[profile] Storage REST yükleme hatası:", uploadResult.status, uploadResult.body);
+      throw new Error(`Yükleme başarısız (HTTP ${uploadResult.status})`);
     }
 
-    // getDownloadURL bazen gecikebilir (Storage metadata propagation), 5 kez dene
-    for (let attempt = 1; attempt <= 5; attempt++) {
-      try {
-        return await getDownloadURL(photoRef);
-      } catch (e) {
-        if (attempt === 5) throw e;
-        await new Promise(r => setTimeout(r, attempt * 700));
-      }
+    let downloadToken: string | undefined;
+    try {
+      const json = JSON.parse(uploadResult.body);
+      downloadToken = json?.downloadTokens?.split(",")[0];
+    } catch {
+      // JSON parse edilemezse aşağıda token'sız URL ile devam edilir
     }
-    throw new Error("URL alınamadı");
+
+    if (downloadToken) {
+      return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodedPath}?alt=media&token=${downloadToken}`;
+    }
+    // Token alınamadıysa (kurallar herkese açık okumaya izin veriyorsa çalışır)
+    return `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodedPath}?alt=media`;
   };
 
   const handleSaveProfile = async () => {
@@ -261,7 +264,18 @@ export default function Profile() {
           photoFailed = true;
           finalPhoto = originalRemotePhoto;
           uploadErrorDetail = e?.code ? `${e.code}` : (e?.message || String(e));
-          console.error("[profile] Fotoğraf yükleme hatası:", e);
+          // StorageError genelde ham sunucu yanıtını customData/serverResponse
+          // içinde taşır — gerçek nedeni (404/403/CORS/ağ vb.) anlamak için
+          // bunları da logluyoruz.
+          console.error("[profile] Fotoğraf yükleme hatası:", {
+            code: e?.code,
+            message: e?.message,
+            name: e?.name,
+            customData: e?.customData,
+            serverResponse: e?.customData?.serverResponse ?? e?.serverResponse_,
+            status: e?.status_ ?? e?.status,
+            raw: e,
+          });
         }
         finally { setUploadingPhoto(false); }
       }
