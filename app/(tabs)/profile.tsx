@@ -197,17 +197,32 @@ export default function Profile() {
   const uploadPhoto = async (uri: string): Promise<string> => {
     if (!storage || !auth?.currentUser) throw new Error("Storage yok");
 
-    // React Native'de firebase/storage'ın uploadString("base64") yöntemi,
-    // dahili olarak ArrayBuffer'dan Blob oluşturmaya çalışıyor — RN'in Blob
-    // implementasyonu bunu desteklemiyor ve "Creating blobs from 'ArrayBuffer'
-    // and 'ArrayBufferView' are not supported" hatası fırlatıyor.
-    // Çözüm: fetch + blob() ile native (RN BlobManager destekli) bir Blob alıp
-    // uploadBytes ile yüklemek — React Native + Firebase projelerinde standart yöntem.
-    const response = await fetch(uri);
-    const blob = await response.blob();
+    // React Native'de firebase/storage yüklemeleri için iki yaygın tuzak var:
+    // 1) uploadString("base64") → dahilen ArrayBuffer'dan Blob oluşturmaya
+    //    çalışır, RN'in Blob implementasyonu bunu desteklemez ("Creating blobs
+    //    from 'ArrayBuffer' ... are not supported" hatası).
+    // 2) fetch(uri).then(r => r.blob()) → RN'in fetch polyfill'i Blob'u doğru
+    //    boyut/içerikle oluşturmaz, bu da sunucudan "storage/unknown" hatası
+    //    döndürülmesine yol açar.
+    // Firebase'in React Native için resmi olarak önerdiği yöntem: blob'u
+    // XMLHttpRequest ile almak — bu, RN'in BlobManager'ı üzerinden gerçek/uyumlu
+    // bir Blob üretir ve uploadBytes ile sorunsuz çalışır.
+    const blob: Blob = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.onload = () => resolve(xhr.response);
+      xhr.onerror = () => reject(new Error("Fotoğraf okunamadı (network)"));
+      xhr.responseType = "blob";
+      xhr.open("GET", uri, true);
+      xhr.send(null);
+    });
 
     const photoRef = ref(storage, `profile-photos/${auth.currentUser.uid}/${Date.now()}.jpg`);
-    await uploadBytes(photoRef, blob, { contentType: "image/jpeg" });
+    try {
+      await uploadBytes(photoRef, blob, { contentType: "image/jpeg" });
+    } finally {
+      // @ts-expect-error RN Blob'da close metodu bellek temizliği için kullanılır
+      if (typeof blob.close === "function") blob.close();
+    }
 
     // getDownloadURL bazen gecikebilir (Storage metadata propagation), 5 kez dene
     for (let attempt = 1; attempt <= 5; attempt++) {
