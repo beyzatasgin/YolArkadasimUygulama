@@ -335,7 +335,7 @@ export default function Discover() {
       >
         <ImageBackground
           source={{ uri: item.image }}
-          style={{ height: 200, justifyContent: "flex-end" }}
+          style={{ minHeight: 220, justifyContent: "flex-end" }}
           resizeMode="cover"
         >
           {/* Dark gradient overlay at top (for heart button) */}
