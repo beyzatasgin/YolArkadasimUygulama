@@ -8,9 +8,15 @@ Yol Arkadaşım, kullanıcıların destinasyon seçerek tarih ve ilgi alanların
 
 ## 📱 Ekran Görüntüleri
 
-| Giriş | Seyahatlerim | AI Chat | İstatistikler |
-|-------|-------------|---------|--------------|
-| Koyu tema, animasyonlu | Yaklaşan & geçmiş ayrımı | Seyahat asistanı | Grafik & metrikler |
+| Giriş | Seyahatlerim | Keşfet |
+|:---:|:---:|:---:|
+| <img src="assets/images/screenshots/giris.jpg" width="220"/> | <img src="assets/images/screenshots/seyahatlerim.jpg" width="220"/> | <img src="assets/images/screenshots/kesfet.jpg" width="220"/> |
+| Koyu tema, animasyonlu giriş ekranı | Yaklaşan seyahatler & paylaşılan planlar | Destinasyon keşfi & favoriler |
+
+| AI Sohbet Asistanı | İstatistikler | Profil |
+|:---:|:---:|:---:|
+| <img src="assets/images/screenshots/ai-chat.jpg" width="220"/> | <img src="assets/images/screenshots/istatistikler.jpg" width="220"/> | <img src="assets/images/screenshots/profil.jpg" width="220"/> |
+| Genel & seyahate özel sohbet modları | Grafik, rekorlar & ilgi alanı dağılımı | Hesap yönetimi & hızlı erişim menüsü |
 
 ---
 
