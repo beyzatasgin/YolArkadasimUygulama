@@ -542,8 +542,12 @@ export default function Discover() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 14, gap: 8 }}
-        style={{ flexGrow: 0 }}
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          alignItems: "center",
+          gap: 8,
+        }}
+        style={{ flexGrow: 0, height: 52, marginBottom: 10 }}
       >
         {CATEGORY_CHIPS.map((chip) => {
           const isActive = searchText.toLowerCase() === chip.label.toLowerCase();
