@@ -90,7 +90,7 @@ export default function TripDetailScreen() {
     try {
       await Share.share({
         title: `${tripName} Seyahat Planı`,
-        message: `✈️ "${tripName}" seyahat planıma göz at!\n\n📱 Yol Arkadaşım uygulamasını aç ve aşağıdaki kodu yapıştır:\n${shareLink}\n\n🌍 Yol Arkadaşım — AI destekli seyahat planlama uygulaması`,
+        message: `✈️ "${tripName}" seyahat planıma göz at!\n\n👇 Aşağıdaki linke tıkla:\n${shareLink}\n\n📱 Yol Arkadaşım uygulaması gereklidir.`,
       });
     } catch {}
   }, [trip, shareLink]);
