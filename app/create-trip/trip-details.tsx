@@ -301,7 +301,7 @@ export default function TripDetails() {
               </View>
             </View>
           )}
-          {tripData?.duration && (
+          {!!tripData?.duration && (
             <View style={styles.summaryRow}>
               <View style={styles.summaryIcon}>
                 <Ionicons name="time" size={16} color={ACCENT} />

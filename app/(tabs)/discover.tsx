@@ -411,7 +411,7 @@ export default function Discover() {
               {item.description}
             </Text>
 
-            {item.rating && (
+            {!!item.rating && (
               <View
                 style={{
                   flexDirection: "row",

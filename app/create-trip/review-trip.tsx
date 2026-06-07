@@ -172,7 +172,7 @@ export default function ReviewTrip() {
                   <Text style={styles.dateValue}>{formatDate(tripData.endDate)}</Text>
                 </View>
               </View>
-              {tripData.duration && (
+              {!!tripData.duration && (
                 <View style={styles.durationBadge}>
                   <Ionicons name="time-outline" size={14} color={ACCENT} />
                   <Text style={styles.durationText}>{tripData.duration} gün</Text>

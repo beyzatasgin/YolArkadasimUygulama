@@ -535,7 +535,7 @@ export default function DayDetail() {
                     <Image source={{ uri: accommodationImage }} style={styles.accommodationImage} resizeMode="cover" />
                     <View style={styles.accommodationContent}>
                       <Text style={styles.accommodationName} numberOfLines={2}>{accommodationName}</Text>
-                      {accommodationRating && (
+                      {!!accommodationRating && (
                         <View style={styles.ratingRow}>
                           <Ionicons name="star" size={14} color="#F59E0B" />
                           <Text style={styles.ratingText}>{accommodationRating}</Text>
@@ -565,9 +565,14 @@ export default function DayDetail() {
               );
               const hasLocation = placeKeywords && placeKeywords.length > 0;
               const activityTitle = hasLocation ? placeKeywords[0] : extractActivityTitle(activity);
+              const remainder = activity.substring(activityTitle.length);
+              // Türkçe ek (örn. "Teho Restaurant'ta öğle yemeği") başlıktan
+              // hemen sonra kesme işaretiyle geliyorsa, başlığı koparmak
+              // açıklamayı "'ta öğle yemeği" gibi anlamsız bırakır —
+              // bu durumda tüm cümleyi olduğu gibi göster.
               const activityDescription =
-                activity.length > activityTitle.length
-                  ? activity.substring(activityTitle.length).trim()
+                activity.length > activityTitle.length && !remainder.trimStart().startsWith("'")
+                  ? remainder.trim()
                   : activity;
               const googleInfo = placesInfoMap[activityTitle];
 

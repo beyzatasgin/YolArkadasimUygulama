@@ -110,6 +110,11 @@ export default function SelectDate() {
       const endDate = new Date(date);
       endDate.setDate(endDate.getDate() + selectedDuration - 1);
       setSelectedEndDate(endDate);
+    } else if (selectedEndDate) {
+      // Bitiş tarihi başlangıçtan önce zaten seçilmişse süreyi yeniden hesapla
+      const diffTime = Math.abs(selectedEndDate.getTime() - date.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      setSelectedDuration(diffDays);
     }
   };
 

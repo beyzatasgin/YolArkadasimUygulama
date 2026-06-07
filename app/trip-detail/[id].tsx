@@ -745,7 +745,7 @@ export default function TripDetailScreen() {
                 {formatDate(trip.startDate)} — {formatDate(trip.endDate)}
               </Text>
             </View>
-            {trip.duration && (
+            {!!trip.duration && (
               <View style={styles.infoRow}>
                 <Ionicons name="time-outline" size={18} color={TEXT_MUTED} />
                 <Text style={styles.infoText}>{trip.duration} gün</Text>
@@ -1253,7 +1253,7 @@ function RecommendationGroup({
             >
               <View style={{ flex: 1 }}>
                 <Text style={styles.recName}>{name}</Text>
-                {rating && (
+                {!!rating && (
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 3, marginTop: 2 }}>
                     {[1, 2, 3, 4, 5].map((star) => (
                       <Ionicons
