@@ -1,4 +1,5 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { Image } from "expo-image";
 import { useNavigation } from "expo-router";
 import {
   collection,
@@ -15,7 +16,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  ImageBackground,
   Linking,
   ScrollView,
   StatusBar,
@@ -333,11 +333,21 @@ export default function Discover() {
         onPress={() => Linking.openURL(buildMapsUrl(item))}
         activeOpacity={0.93}
       >
-        <ImageBackground
-          source={{ uri: item.image }}
-          style={{ minHeight: 220, justifyContent: "flex-end" }}
-          resizeMode="cover"
+        <View
+          style={{
+            minHeight: 220,
+            justifyContent: "flex-end",
+            overflow: "hidden",
+          }}
         >
+          <Image
+            source={{ uri: item.image }}
+            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
+          />
+
           {/* Dark gradient overlay at top (for heart button) */}
           <View
             style={{
@@ -446,7 +456,7 @@ export default function Discover() {
               </Text>
             </View>
           </View>
-        </ImageBackground>
+        </View>
       </TouchableOpacity>
     );
   };

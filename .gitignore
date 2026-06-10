@@ -3,6 +3,12 @@
 # dependencies
 node_modules/
 
+# Cloud Functions build output
+functions/lib/
+
+# editor
+.vscode/
+
 # Expo
 .expo/
 dist/
