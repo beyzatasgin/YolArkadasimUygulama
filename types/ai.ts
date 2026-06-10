@@ -37,7 +37,6 @@ export type PackingCategory = {
 export type AIPlan = {
   itinerary: DayItinerary[];
   recommendations: AIRecommendations;
-  estimatedCost?: number | null;
   packingList?: PackingCategory[];
 };
 

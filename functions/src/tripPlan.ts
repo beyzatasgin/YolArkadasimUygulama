@@ -72,16 +72,14 @@ Lütfen aşağıdaki JSON formatında bir seyahat planı oluştur:
     "restaurants": [{"name": "Restoran önerisi 1", "rating": 4.4, "address": "Adres bilgisi", "url": "Google Maps linki", "photoUrl": "Fotoğraf URL"}],
     "attractions": [{"name": "Görülecek yer 1", "rating": 4.6, "address": "Adres bilgisi", "url": "Google Maps linki", "photoUrl": "Fotoğraf URL"}],
     "tips": ["İpucu 1", "İpucu 2", "İpucu 3"]
-  },
-  "estimatedCost": 5000
+  }
 }
 
 Kurallar:
 - Sadece JSON formatında cevap ver, başka açıklama yapma.
 - Eğer Google Places verisi verildiyse, recommendations alanlarında bu listedeki gerçek mekan adlarını kullan.
 - activities içinde de mümkün olduğunca gerçek mekan isimleri kullan.
-- İlgi alanlarına uygun aktiviteler öner.
-- estimatedCost alanına kişi başı toplam tahmini harcamayı Türk Lirası (₺) cinsinden sayısal olarak yaz (örn: 8500). Konaklama, yemek ve ulaşım dahil kaba bir tahmin yap.`;
+- İlgi alanlarına uygun aktiviteler öner.`;
 };
 
 async function callOpenAI(prompt: string, apiKey: string): Promise<string> {

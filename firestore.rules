@@ -41,12 +41,6 @@ service cloud.firestore {
       allow create: if isOwner(request.resource.data.userId);
     }
 
-    // Harcamalar
-    match /expenses/{expenseId} {
-      allow read, write: if isOwner(resource.data.userId);
-      allow create: if isOwner(request.resource.data.userId);
-    }
-
     // Seyahat fotoğrafları
     match /tripPhotos/{photoId} {
       allow read, write: if isOwner(resource.data.userId);

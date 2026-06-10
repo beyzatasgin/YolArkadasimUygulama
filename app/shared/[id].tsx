@@ -24,7 +24,6 @@ const ACCENT      = "#6366F1";
 const DARK_BG     = "#0A0F1E";
 const TEXT_PRIMARY = "#111827";
 const TEXT_MUTED   = "#9CA3AF";
-const SUCCESS      = "#10B981";
 const WARNING      = "#F59E0B";
 
 export default function SharedTripScreen() {
@@ -110,12 +109,6 @@ export default function SharedTripScreen() {
           <Row icon="calendar-outline"   label={`${fmt(trip.startDate)} — ${fmt(trip.endDate)}`} />
           {trip.duration  && <Row icon="time-outline"    label={`${trip.duration} gün`} />}
           {trip.travelers && <Row icon="people-outline"  label={`${trip.travelers} kişi`} />}
-          {trip.aiPlan?.estimatedCost != null && (
-            <Row icon="wallet-outline"
-              label={`Tahmini bütçe: ${trip.aiPlan.estimatedCost.toLocaleString("tr-TR")} ₺ (kişi başı)`}
-              color={SUCCESS}
-            />
-          )}
         </View>
 
         {/* İlgi alanları */}

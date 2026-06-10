@@ -1,6 +1,7 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Constants from "expo-constants";
 import { useNavigation, useRouter } from "expo-router";
+import { collection, getDocs, query, where } from "firebase/firestore";
 import { useCallback, useLayoutEffect, useState } from "react";
 import {
   Alert,
@@ -12,6 +13,7 @@ import {
   View,
 } from "react-native";
 import DatePickerModal from "../../components/DatePickerModal";
+import { auth, db } from "../../configs/FirebaseConfig";
 import { useCreateTrip } from "../../hooks/useCreateTrip";
 
 const ACCENT = "#6366F1";
@@ -136,12 +138,9 @@ export default function SelectDate() {
     }
   };
 
-  const handleContinue = () => {
-    if (!selectedStartDate || !selectedEndDate) {
-      Alert.alert("Hata", "Lütfen başlangıç ve bitiş tarihlerini seçin");
-      return;
-    }
+  const [checkingOverlap, setCheckingOverlap] = useState(false);
 
+  const proceedToPreferences = () => {
     const updatedTripData = {
       ...tripData,
       startDate: selectedStartDate,
@@ -151,6 +150,57 @@ export default function SelectDate() {
 
     setTripData(updatedTripData);
     router.push("/create-trip/trip-preferences");
+  };
+
+  const findOverlappingTrips = async (start: Date, end: Date) => {
+    if (!auth?.currentUser || !db) return [];
+
+    const q = query(collection(db, "trips"), where("userId", "==", auth.currentUser.uid));
+    const snap = await getDocs(q);
+    const overlapping: string[] = [];
+
+    snap.forEach((docSnap) => {
+      const data = docSnap.data();
+      const tripStart = data.startDate?.toDate ? data.startDate.toDate() : data.startDate ? new Date(data.startDate) : null;
+      const tripEnd = data.endDate?.toDate ? data.endDate.toDate() : data.endDate ? new Date(data.endDate) : null;
+      if (!tripStart || !tripEnd) return;
+
+      const isOverlapping = start <= tripEnd && end >= tripStart;
+      if (isOverlapping) {
+        overlapping.push(data.tripName || data.selectedPlace?.name || "Adsız seyahat");
+      }
+    });
+
+    return overlapping;
+  };
+
+  const handleContinue = async () => {
+    if (!selectedStartDate || !selectedEndDate) {
+      Alert.alert("Hata", "Lütfen başlangıç ve bitiş tarihlerini seçin");
+      return;
+    }
+
+    setCheckingOverlap(true);
+    try {
+      const overlapping = await findOverlappingTrips(selectedStartDate, selectedEndDate);
+      if (overlapping.length > 0) {
+        Alert.alert(
+          "Tarih Çakışması",
+          `Seçtiğin tarihler şu seyahat(ler)le çakışıyor: ${overlapping.join(", ")}. Yine de devam etmek istiyor musun?`,
+          [
+            { text: "Tarihi Değiştir", style: "cancel" },
+            { text: "Yine de Devam Et", onPress: proceedToPreferences },
+          ],
+        );
+        return;
+      }
+    } catch (error) {
+      console.error("Tarih çakışması kontrolü hatası:", error);
+    } finally {
+      setCheckingOverlap(false);
+    }
+
+    proceedToPreferences();
   };
 
   return (
@@ -413,17 +463,17 @@ export default function SelectDate() {
             alignItems: "center",
             justifyContent: "center",
             padding: 17,
-            backgroundColor: (!selectedStartDate || !selectedEndDate) ? "#D1D5DB" : ACCENT,
+            backgroundColor: (!selectedStartDate || !selectedEndDate || checkingOverlap) ? "#D1D5DB" : ACCENT,
             borderRadius: 16,
             gap: 8,
           }}
           onPress={handleContinue}
-          disabled={!selectedStartDate || !selectedEndDate}
+          disabled={!selectedStartDate || !selectedEndDate || checkingOverlap}
         >
           <Text style={{ fontSize: 16, fontFamily: "outfit-medium", color: "#FFFFFF" }}>
-            Devam Et
+            {checkingOverlap ? "Kontrol ediliyor..." : "Devam Et"}
           </Text>
-          <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+          {!checkingOverlap && <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />}
         </TouchableOpacity>
       </ScrollView>
 

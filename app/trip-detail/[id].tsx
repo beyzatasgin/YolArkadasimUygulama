@@ -22,7 +22,6 @@ import {
 import { auth, db, firebaseInitError } from "../../configs/FirebaseConfig";
 import { getFirebaseAuthInitErrorMessage } from "../../configs/FirebaseMessages";
 import TripMap from "../../components/TripMap";
-import TripRating from "../../components/TripRating";
 import WeatherCard from "../../components/WeatherCard";
 import PackingChecklist from "../../components/PackingChecklist";
 import { useAttractionPins } from "../../hooks/useAttractionPins";
@@ -931,25 +930,6 @@ export default function TripDetailScreen() {
                     )}
                 </View>
               )}
-            </InfoCard>
-          )}
-
-          {/* ── Değerlendirme (geçmiş seyahatler) ─────────── */}
-          {tripStatus === "Geçmiş" && (
-            <InfoCard
-              iconName="star"
-              iconColor={WARNING}
-              iconBg="#FFFBEB"
-              title="Değerlendirme"
-            >
-              <TripRating
-                tripId={trip.id}
-                initialRating={trip.rating ?? null}
-                initialReview={trip.review ?? null}
-                onSaved={(r, rev) =>
-                  setTrip((prev) => prev ? ({ ...prev, rating: r, review: rev }) : null)
-                }
-              />
             </InfoCard>
           )}
 

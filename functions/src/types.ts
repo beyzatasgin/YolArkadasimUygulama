@@ -20,7 +20,6 @@ export type AIPlan = {
     attractions?: PlaceRecommendation[];
     tips?: string[];
   };
-  estimatedCost?: number | null;
 };
 
 export type GenerateTripPlanInput = {

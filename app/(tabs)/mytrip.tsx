@@ -22,7 +22,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { StarRow } from "../../components/TripRating";
 import { cancelTripNotifications } from "../../services/notificationService";
 import { getPlaceImageUrl } from "../../utils/imageHelper";
 import { auth, db, firebaseInitError } from "../../configs/FirebaseConfig";
@@ -555,20 +554,6 @@ export default function Mytrip() {
 
           {/* Card bottom */}
           <View style={{ paddingHorizontal: 16, paddingVertical: 14 }}>
-            {item.rating ? (
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 }}>
-                <StarRow rating={item.rating} readonly size={14} />
-                {item.review ? (
-                  <Text
-                    style={{ fontFamily: "outfit", fontSize: 12, color: TEXT_MUTED }}
-                    numberOfLines={1}
-                  >
-                    "{item.review}"
-                  </Text>
-                ) : null}
-              </View>
-            ) : null}
-
             <TouchableOpacity
               style={{
                 backgroundColor: INDIGO,

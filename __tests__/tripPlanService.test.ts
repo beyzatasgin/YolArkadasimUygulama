@@ -37,7 +37,6 @@ describe("parseAIResponse", () => {
         attractions: [],
         tips: ["Müze kartı alın"],
       },
-      estimatedCost: 5000,
       packingList: [],
     });
 
@@ -45,7 +44,6 @@ describe("parseAIResponse", () => {
     expect(result.itinerary).toHaveLength(1);
     expect(result.itinerary[0].day).toBe(1);
     expect(result.itinerary[0].title).toBe("İstanbul'u Keşfet");
-    expect(result.estimatedCost).toBe(5000);
   });
 
   it("```json ... ``` bloğundan JSON çıkarır", () => {
@@ -53,7 +51,6 @@ describe("parseAIResponse", () => {
 {
   "itinerary": [{"day": 1, "title": "Test", "activities": [], "time": "Sabah", "meals": {"breakfast": "", "lunch": "", "dinner": ""}}],
   "recommendations": {"accommodations": [], "restaurants": [], "attractions": [], "tips": []},
-  "estimatedCost": 1000,
   "packingList": []
 }
 \`\`\``;
@@ -67,7 +64,7 @@ describe("parseAIResponse", () => {
   });
 
   it("itinerary alanı yoksa hata fırlatır", () => {
-    const invalidPlan = JSON.stringify({ estimatedCost: 1000 });
+    const invalidPlan = JSON.stringify({ packingList: [] });
     expect(() => parseAIResponse(invalidPlan)).toThrow("Geçersiz plan formatı");
   });
 

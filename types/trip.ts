@@ -35,8 +35,6 @@ export type SavedTrip = TripData & {
   tripName: string;
   createdAt?: Date;
   updatedAt?: Date;
-  rating?: number | null;
-  review?: string | null;
   notes?: string;
   packingChecked?: Record<string, boolean>;
   isPublic?: boolean;
@@ -58,8 +56,6 @@ export type TripListItem = {
   notes?: string;
   aiPlan?: AIPlan | null;
   createdAt?: Date;
-  rating?: number | null;
-  review?: string | null;
   packingChecked?: Record<string, boolean>;
   isPublic?: boolean;
   sharedWith?: string[];

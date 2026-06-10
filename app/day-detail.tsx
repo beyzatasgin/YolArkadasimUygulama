@@ -707,12 +707,12 @@ export default function DayDetail() {
                   <View style={styles.listCardAccent} />
                   <View style={styles.listCardContent}>
                     <Text style={styles.listCardName}>{restaurantName}</Text>
-                    {(googleInfo?.address || restaurantItem.address) && (
+                    {!!(googleInfo?.address || restaurantItem.address) && (
                       <Text style={styles.listCardAddress} numberOfLines={2}>
                         {googleInfo?.address || restaurantItem.address}
                       </Text>
                     )}
-                    {(googleInfo?.rating || restaurantItem.rating) && (
+                    {!!(googleInfo?.rating || restaurantItem.rating) && (
                       <View style={styles.ratingRow}>
                         <Ionicons name="star" size={13} color="#F59E0B" />
                         <Text style={styles.ratingText}>{googleInfo?.rating || restaurantItem.rating}</Text>
@@ -774,12 +774,12 @@ export default function DayDetail() {
                   <View style={styles.listCardAccent} />
                   <View style={styles.listCardContent}>
                     <Text style={styles.listCardName}>{attractionName}</Text>
-                    {(googleInfo?.address || attractionItem.address) && (
+                    {!!(googleInfo?.address || attractionItem.address) && (
                       <Text style={styles.listCardAddress} numberOfLines={2}>
                         {googleInfo?.address || attractionItem.address}
                       </Text>
                     )}
-                    {(googleInfo?.rating || attractionItem.rating) && (
+                    {!!(googleInfo?.rating || attractionItem.rating) && (
                       <View style={styles.ratingRow}>
                         <Ionicons name="star" size={13} color="#F59E0B" />
                         <Text style={styles.ratingText}>{googleInfo?.rating || attractionItem.rating}</Text>
@@ -847,7 +847,7 @@ export default function DayDetail() {
           </View>
         )}
       </ScrollView>
-      )}  {/* activeTab === "list" kapanışı */}
+      )}
     </View>
   );
 }

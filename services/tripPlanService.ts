@@ -180,7 +180,6 @@ Lütfen aşağıdaki JSON formatında bir seyahat planı oluştur:
     "attractions": [{"name": "Görülecek yer 1", "rating": 4.6, "address": "Adres bilgisi", "url": "Google Maps linki", "photoUrl": "Fotoğraf URL"}],
     "tips": ["İpucu 1", "İpucu 2", "İpucu 3"]
   },
-  "estimatedCost": 5000,
   "packingList": [
     {"category": "Belgeler", "items": ["Pasaport", "Vize (gerekiyorsa)", "Uçak bileti / rezervasyon"]},
     {"category": "Giysi", "items": ["T-shirt (3 adet)", "Yürüyüş ayakkabısı"]},
@@ -195,7 +194,6 @@ Kurallar:
 - Eğer Google Places verisi verildiyse, recommendations alanlarında bu listedeki gerçek mekan adlarını kullan.
 - activities içinde de mümkün olduğunca gerçek mekan isimleri kullan.
 - İlgi alanlarına uygun aktiviteler öner.
-- estimatedCost alanına kişi başı toplam tahmini harcamayı Türk Lirası (₺) cinsinden sayısal olarak yaz (örn: 8500). Konaklama, yemek ve ulaşım dahil kaba bir tahmin yap.
 - packingList için destinasyon iklimine, süreye ve ilgi alanlarına göre kişiselleştirilmiş eşya listesi oluştur. Her kategoride 3-6 madde olsun. Türkçe yaz.
 - Her gün için meals alanında breakfast, lunch, dinner önerisi yaz. Mekan adı veya yemek türü belirt. Destinasyona özgü yerel lezzetlere öncelik ver. Türkçe yaz.`;
 };

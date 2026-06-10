@@ -27,7 +27,6 @@ type TripStat = {
   duration?: number;
   travelers?: number;
   interests?: string[];
-  rating?: number;
   createdAt?: Date;
 };
 
@@ -37,8 +36,6 @@ type Stats = {
   uniqueDestinations: number;
   upcomingTrips: number;
   pastTrips: number;
-  averageRating: number | null;
-  ratedTrips: number;
   mostVisitedPlace: string | null;
   topInterests: { key: string; label: string; count: number }[];
   longestTrip: { name: string; days: number } | null;
@@ -66,11 +63,6 @@ const computeStats = (trips: TripStat[]): Stats => {
   destinations.forEach((d) => { if (d) destCount[d] = (destCount[d] || 0) + 1; });
   const uniqueDestinations = Object.keys(destCount).length;
   const mostVisitedPlace = Object.entries(destCount).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
-
-  const ratedTrips = trips.filter((t) => t.rating && t.rating > 0);
-  const averageRating = ratedTrips.length > 0
-    ? Math.round((ratedTrips.reduce((sum, t) => sum + (t.rating || 0), 0) / ratedTrips.length) * 10) / 10
-    : null;
 
   const interestCount: Record<string, number> = {};
   trips.forEach((t) => {
@@ -110,8 +102,6 @@ const computeStats = (trips: TripStat[]): Stats => {
     uniqueDestinations,
     upcomingTrips: upcoming.length,
     pastTrips: past.length,
-    averageRating,
-    ratedTrips: ratedTrips.length,
     mostVisitedPlace,
     topInterests,
     longestTrip: longestTrip ? { name: longestTrip.tripName || longestTrip.selectedPlace?.name || "?", days: longestTrip.duration || 0 } : null,
@@ -150,22 +140,6 @@ function BarChart({ data }: { data: { month: string; count: number }[] }) {
   );
 }
 
-// Yıldız satırı
-function StarDisplay({ rating }: { rating: number }) {
-  return (
-    <View style={{ flexDirection: "row", gap: 2 }}>
-      {[1, 2, 3, 4, 5].map((s) => (
-        <Ionicons
-          key={s}
-          name={s <= Math.round(rating) ? "star" : "star-outline"}
-          size={16}
-          color="#F59E0B"
-        />
-      ))}
-    </View>
-  );
-}
-
 export default function Statistics() {
   const navigation = useNavigation();
   const router = useRouter();
@@ -193,7 +167,6 @@ export default function Statistics() {
           duration: data.duration,
           travelers: data.travelers,
           interests: data.interests,
-          rating: data.rating,
           createdAt: toDate(data.createdAt),
         };
       });
@@ -306,24 +279,6 @@ export default function Statistics() {
                   </View>
                 </View>
               )}
-            </View>
-          )}
-
-          {/* Ortalama puan */}
-          {stats.averageRating !== null && (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>⭐ Değerlendirmeler</Text>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginTop: 12 }}>
-                <Text style={{ fontFamily: "outfit-bold", fontSize: 40, color: "#F59E0B" }}>
-                  {stats.averageRating}
-                </Text>
-                <View>
-                  <StarDisplay rating={stats.averageRating} />
-                  <Text style={{ fontFamily: "outfit", fontSize: 12, color: "#9CA3AF", marginTop: 4 }}>
-                    {stats.ratedTrips} seyahat değerlendirildi
-                  </Text>
-                </View>
-              </View>
             </View>
           )}
 
